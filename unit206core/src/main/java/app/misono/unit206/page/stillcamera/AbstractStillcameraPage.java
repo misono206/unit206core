@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package app.misono.unit206.page.steelcamera;
+package app.misono.unit206.page.stillcamera;
 
 import android.Manifest;
 import android.media.MediaActionSound;
@@ -37,26 +37,30 @@ import app.misono.unit206.page.PageActivity;
 import app.misono.unit206.page.PageManager;
 import app.misono.unit206.task.Taskz;
 
-public abstract class AbstractSteelcameraPage extends AbstractPage {
-	private static final String TAG = "AbstractSteelcameraPage";
+import java.util.concurrent.Executor;
+
+public abstract class AbstractStillcameraPage extends AbstractPage {
+	private static final String TAG = "AbstractStillcameraPage";
 
 	private final int codePerm;
 
 	private CallbackCameraParameters callbackParams;
-	private SteelcameraControl camera;
+	private StillcameraControl camera;
 	private MediaActionSound sound;
 	private CallbackBitmap taken;
 	private SurfaceView surface;
 	private Runnable cameraStarted;
+	private Runnable cameraStopped;
 	private Runnable surfaceCreated;
 	private Runnable surfaceDestroyed;
 	private Runnable surfaceChanged;
 	private Runnable denied, neverAsked;
+	private Runnable beforeRequestPermission;
 	private State state;
 	private int wPicture, hPicture;
 	private boolean readySurface;
 	private int idCamera;
-	private int zoom100, qualityJpeg, aspect100;
+	private int zoom100, qualityJpeg, aspect100, degreeDevice;
 
 	private enum State {
 		IDLE,
@@ -64,7 +68,7 @@ public abstract class AbstractSteelcameraPage extends AbstractPage {
 		PREVIEWING;
 	}
 
-	public AbstractSteelcameraPage(
+	public AbstractStillcameraPage(
 		@NonNull PageManager manager,
 		@NonNull PageActivity activity,
 		@NonNull FrameLayout parent,
@@ -145,6 +149,10 @@ public abstract class AbstractSteelcameraPage extends AbstractPage {
 		this.taken = taken;
 	}
 
+	protected void setBeforeRequestPermissonCallback(@NonNull Runnable callabck) {
+		beforeRequestPermission = callabck;
+	}
+
 	@MainThread
 	protected void startPreview() {
 		log("startPreview:" + state);
@@ -167,6 +175,10 @@ public abstract class AbstractSteelcameraPage extends AbstractPage {
 			state = State.IDLE;
 			break;
 		}
+	}
+
+	protected void setDeviceDegree(int degree) {
+		degreeDevice = degree;
 	}
 
 	protected void setSurfaceView(@NonNull SurfaceView surface) {
@@ -214,10 +226,15 @@ public abstract class AbstractSteelcameraPage extends AbstractPage {
 		cameraStarted = callback;
 	}
 
+	protected void setCameraStopped(@Nullable Runnable callback) {
+		cameraStopped = callback;
+	}
+
 	protected void setCameraParametersCallback(@Nullable CallbackCameraParameters callbackParams) {
 		this.callbackParams = callbackParams;
 	}
 
+	@Deprecated	// use Executor version
 	protected void takePicture() {
 		log("takePicture:" + state);
 		switch (state) {
@@ -228,6 +245,25 @@ public abstract class AbstractSteelcameraPage extends AbstractPage {
 				state = State.IDLE;
 				if (taken != null) {
 					taken.callback(bitmap);
+				}
+			});
+			break;
+		}
+	}
+
+	protected void takePicture(@NonNull Executor executor) {
+		log("takePicture:" + state);
+		switch (state) {
+		case PREVIEWING:
+			camera.takePictureTask(executor).addOnCompleteListener(task -> {
+				stopCameraInternal();
+				state = State.IDLE;
+				if (task.isSuccessful()) {
+					if (taken != null) {
+						taken.callback(task.getResult());
+					}
+				} else{
+					Taskz.printStackTrace2(task.getException());
 				}
 			});
 			break;
@@ -253,6 +289,23 @@ public abstract class AbstractSteelcameraPage extends AbstractPage {
 		case PREVIEWING:
 			notReady();
 			break;
+		}
+	}
+
+	protected void beforeRequestPermissionOk() {
+		requestPerm();
+	}
+
+	protected void beforeRequestPermissionCancel() {
+		state = State.IDLE;
+		onBackPressed();
+	}
+
+	private void checkRequestPerm() {
+		if (beforeRequestPermission != null) {
+			beforeRequestPermission.run();
+		} else {
+			requestPerm();
 		}
 	}
 
@@ -301,7 +354,7 @@ public abstract class AbstractSteelcameraPage extends AbstractPage {
 				startCameraInternal();
 				state = State.PREVIEWING;
 			} else {
-				requestPerm();
+				checkRequestPerm();
 				state = State.STARTED;
 			}
 		} else {
@@ -319,11 +372,18 @@ public abstract class AbstractSteelcameraPage extends AbstractPage {
 		log("startCameraInternal:");
 		sound = new MediaActionSound();
 		sound.load(MediaActionSound.SHUTTER_CLICK);
-		camera = new SteelcameraControl(aspect100);
+		camera = new StillcameraControl(aspect100);
+		camera.setDeviceDegree(degreeDevice);
 		activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-		camera.start(idCamera, surface, zoom100, wPicture, hPicture, qualityJpeg, callbackParams);
-		if (cameraStarted != null) {
-			cameraStarted.run();
+		log("startCameraInternal:camera.start:");
+		try {
+			camera.start(idCamera, surface, zoom100, wPicture, hPicture, qualityJpeg, callbackParams);
+			log("startCameraInternal:started:" + cameraStarted);
+			if (cameraStarted != null) {
+				cameraStarted.run();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -340,6 +400,10 @@ public abstract class AbstractSteelcameraPage extends AbstractPage {
 		camera = null;
 		sound.release();
 		sound = null;
+		log("stopCameraInternal:" + cameraStopped);
+		if (cameraStopped != null) {
+			cameraStopped.run();
+		}
 	}
 
 	private void log(@NonNull String msg) {

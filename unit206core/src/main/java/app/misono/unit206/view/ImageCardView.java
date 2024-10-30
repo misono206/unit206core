@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,21 +36,36 @@ public class ImageCardView extends MaterialCardView {
 	private int margin;
 
 	public ImageCardView(@NonNull Context context) {
-		this(context, null);
+		super(context);
+		image = new AppCompatImageView(context);
+		init(context);
 	}
 
 	public ImageCardView(@NonNull Context context, @Nullable AttributeSet attr) {
 		super(context, attr);
+		image = new AppCompatImageView(context, attr);
+		init(context);
+	}
 
+	public ImageCardView(@NonNull Context context, AttributeSet attr, int defStyleAttr) {
+		super(context, attr, defStyleAttr);
+		image = new AppCompatImageView(context, attr, defStyleAttr);
+		init(context);
+	}
+
+	private void init(@NonNull Context context) {
 		margin = (int)TypedValue.applyDimension(
 			TypedValue.COMPLEX_UNIT_MM,
 			0.5f,
 			context.getResources().getDisplayMetrics()
 		);
-		image = new AppCompatImageView(context);
 		image.setAdjustViewBounds(true);
 		image.setScaleType(ImageView.ScaleType.CENTER_CROP);
 		addView(image, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+	}
+
+	public void setScaleType(@NonNull ImageView.ScaleType type) {
+		image.setScaleType(type);
 	}
 
 	public void setBitmap(@NonNull Bitmap bitmap) {

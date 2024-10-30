@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,12 @@ import android.content.Context;
 import android.util.AttributeSet;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.google.android.material.card.MaterialCardView;
 
+/**
+ * CardView for a line.
+ */
 class TableCardView extends MaterialCardView {
 	private static final String TAG = "TableCardView";
 
@@ -32,7 +34,7 @@ class TableCardView extends MaterialCardView {
 		setRadius(0);
 	}
 
-	TableCardView(@NonNull Context ctx, @Nullable AttributeSet attr) {
+	TableCardView(@NonNull Context ctx, AttributeSet attr) {
 		super(ctx, attr);
 		setRadius(0);
 	}

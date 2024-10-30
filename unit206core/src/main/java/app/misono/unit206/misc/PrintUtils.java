@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,58 @@
 
 package app.misono.unit206.misc;
 
-import android.os.Build;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 
-@RequiresApi(19)
 public class PrintUtils {
+	@Deprecated		// use createAttrA4Color350()
 	@NonNull
-	public static PrintAttributes createAttrA4Color300() {
+	public static PrintAttributes createAttrA4Color300(boolean landscape) {
+		if (landscape) {
+			return createAttrA4Color300Landscape();
+		} else {
+			return createAttrA4Color300Portrait();
+		}
+	}
+
+	@NonNull
+	public static PrintAttributes createAttrA4Color350(boolean landscape) {
+		if (landscape) {
+			return createAttrA4Color350Landscape();
+		} else {
+			return createAttrA4Color350Portrait();
+		}
+	}
+
+	@Deprecated		// use createAttrA4Color350Portrait()
+	@NonNull
+	public static PrintAttributes createAttrA4Color300Portrait() {
+		return createAttrA4Color300(PrintAttributes.MediaSize.ISO_A4.asPortrait());
+	}
+
+	@NonNull
+	public static PrintAttributes createAttrA4Color350Portrait() {
+		return createAttrA4Color350(PrintAttributes.MediaSize.ISO_A4.asPortrait());
+	}
+
+	@Deprecated		// use createAttrA4Color350Landscape()
+	@NonNull
+	public static PrintAttributes createAttrA4Color300Landscape() {
+		return createAttrA4Color300(PrintAttributes.MediaSize.ISO_A4.asLandscape());
+	}
+
+	@NonNull
+	public static PrintAttributes createAttrA4Color350Landscape() {
+		return createAttrA4Color350(PrintAttributes.MediaSize.ISO_A4.asLandscape());
+	}
+
+	@NonNull
+	private static PrintAttributes createAttrA4Color300(@NonNull PrintAttributes.MediaSize size) {
 		return new PrintAttributes.Builder()
-			.setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+			.setMediaSize(size)
 			.setResolution(new PrintAttributes.Resolution("300dpi", "300dpi", 300, 300))
 			.setColorMode(PrintAttributes.COLOR_MODE_COLOR)
 			.setMinMargins(PrintAttributes.Margins.NO_MARGINS)
@@ -37,14 +75,18 @@ public class PrintUtils {
 	}
 
 	@NonNull
+	private static PrintAttributes createAttrA4Color350(@NonNull PrintAttributes.MediaSize size) {
+		return new PrintAttributes.Builder()
+			.setMediaSize(size)
+			.setResolution(new PrintAttributes.Resolution("350dpi", "350dpi", 350, 350))
+			.setColorMode(PrintAttributes.COLOR_MODE_COLOR)
+			.setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+			.build();
+	}
+
+	@NonNull
 	public static PrintDocumentAdapter createAdapter(@NonNull WebView webView, @NonNull String fname) {
-		PrintDocumentAdapter adapter;
-		if (21 <= Build.VERSION.SDK_INT) {
-			adapter = webView.createPrintDocumentAdapter(fname);
-		} else {
-			adapter = webView.createPrintDocumentAdapter();
-		}
-		return adapter;
+		return webView.createPrintDocumentAdapter(fname);
 	}
 
 }

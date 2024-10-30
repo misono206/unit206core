@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Deprecated		// create the your adapter class.
 public abstract class FixedAdapter<
 	C extends FixedCardView<C, L, I>,
 	L extends FixedCardLayout<C, L, I>,
@@ -84,8 +85,8 @@ public abstract class FixedAdapter<
 	}
 
 	@Override
-	public void submitList(List<I> list) {
-		if (list.size() == getItemCount()) {
+	public void submitList(@Nullable List<I> list) {
+		if (list == null || list.size() == getItemCount()) {
 			super.submitList(list);
 		} else {
 			super.submitList(Collections.emptyList(), () -> {
@@ -95,7 +96,7 @@ public abstract class FixedAdapter<
 	}
 
 	@Override
-	public void submitList(List<I> list, Runnable commitCallback) {
+	public void submitList(@Nullable List<I> list, Runnable commitCallback) {
 		if (list == null || list.size() == getItemCount()) {
 			super.submitList(list, commitCallback);
 		} else {

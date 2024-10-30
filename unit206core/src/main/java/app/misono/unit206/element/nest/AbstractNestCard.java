@@ -17,7 +17,6 @@
 package app.misono.unit206.element.nest;
 
 import android.content.Context;
-import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 
@@ -26,8 +25,8 @@ import app.misono.unit206.card.AbstractCard;
 public abstract class AbstractNestCard extends AbstractCard {
 	private int pixelIndent;
 
-	public AbstractNestCard(@NonNull Context context, @NonNull ViewGroup.MarginLayoutParams param) {
-		super(context, param);
+	public AbstractNestCard(@NonNull Context context) {
+		super(context);
 	}
 
 	public void setIndentPixel(int pixel) {

@@ -17,6 +17,7 @@
 package app.misono.unit206.element.nest;
 
 import android.graphics.Color;
+import android.view.View;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
@@ -33,16 +34,23 @@ public final class NestListElement implements Element {
 	public NestListElement(@NonNull FrameLayout parent, @NonNull FrameLayout.LayoutParams param) {
 		base.setBackgroundColor(Color.CYAN);
 		parent.addView(base, param);
-		setPixelSize(param.width, param.height);
+		changeLayout(param.width, param.height);
 	}
 
-	private void setPixelSize(int wPixel, int hPixel) {
+	@Override
+	public void changeLayout(int wPixel, int hPixel) {
 //		pixelIcon = hPixel * 2 / 3;
-		//		pixelIcon = hPixel / 2;
+//		pixelIcon = hPixel / 2;
 		FrameLayout.LayoutParams p1 = (FrameLayout.LayoutParams)base.getLayoutParams();
 		p1.width = wPixel;
 		p1.height = hPixel;
 		base.requestLayout();
+	}
+
+	@Override
+	@NonNull
+	public View getView() {
+		return base;
 	}
 
 	@Override
@@ -51,11 +59,6 @@ public final class NestListElement implements Element {
 
 	@Override
 	public void onPause() {
-	}
-
-	@Override
-	public void setLayoutParams(@NonNull FrameLayout.LayoutParams params) {
-		setPixelSize(params.width, params.height);
 	}
 
 	@Override

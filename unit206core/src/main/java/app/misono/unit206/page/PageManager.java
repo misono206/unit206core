@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ public final class PageManager implements Closeable {
 	private final Bundle savedInstanceState;
 
 	private HamburgerMenu hamburger;
+	private Runnable cbFinish;
 	private int mWidth;
 	private int mHeight;
 
@@ -52,7 +53,15 @@ public final class PageManager implements Closeable {
 		this.hamburger = hamburger;
 	}
 
-	private void refreshTopPage() {
+	public void setFinishCallback(@Nullable Runnable cbFinish) {
+		this.cbFinish = cbFinish;
+	}
+
+	/**
+	 * Refresh the top page.
+	 * It will be invoked Page.changeLayout(int, int).
+	 */
+	public void refreshTopPage() {
 		Page page = getTopPage();
 		if (page != null) {
 			refreshTopPage(page);
@@ -91,10 +100,12 @@ public final class PageManager implements Closeable {
 		}
 	}
 
+	@Deprecated
 	public void addInstance(@NonNull Page page) {
 		list.add(page);
 	}
 
+	@Deprecated
 	public void removeInstance(@NonNull Page page) {
 		PagePref pref = page.getPref();
 		if (pref != null) {
@@ -104,6 +115,7 @@ public final class PageManager implements Closeable {
 	}
 
 	public void addStack(@NonNull Page page, @Nullable Runnable done) {
+		log("addStack:" + page);
 		Page top = getTopPage();
 		if (top != null) {
 			top.onPause();
@@ -115,7 +127,9 @@ public final class PageManager implements Closeable {
 	}
 
 	public void addStackIfNeed(@NonNull Page page, @Nullable Runnable done) {
-		if (!stack.contains(page)) {
+		boolean add = !stack.contains(page);
+		log("addStackIfNeed:" + page + " add:" + add);
+		if (add) {
 			Page top = getTopPage();
 			if (top != null && page != top) {
 				top.onPause();
@@ -131,46 +145,70 @@ public final class PageManager implements Closeable {
 		}
 	}
 
+	/**
+	 * Remove the page from stack.
+	 * @return stack is empty.
+	 */
 	public boolean removeStack(@NonNull Page page, @Nullable Runnable done) {
-		page.removeFromParent(done);
-		page.onPause();
-		stack.remove(page);
-		refreshTopPage();
+		return removeStack(page, false, done);
+	}
+
+	private boolean removeStack(@NonNull Page page, boolean immediately, @Nullable Runnable done) {
+		boolean contains = stack.contains(page);
+		Page top = getTopPage();
+		boolean isTop = page == top;
+		log("removeStack:" + page + " contains:" + contains + " isTop:" + isTop);
+		if (contains) {
+			stack.remove(page);
+			if (isTop) {
+				page.onPause();
+				refreshTopPage();
+			}
+		}
+		if (immediately) {
+			page.removeFromParentImmediately();
+		} else {
+			page.removeFromParent(done);
+		}
 		boolean empty = stack.isEmpty();
-		if (!empty) {
-			Page top = getTopPage();
+		if (!empty && isTop) {
+			top = getTopPage();
 			if (top != null) {
 				top.onResume();
 			}
 		}
+		log("removeStack:empty:" + empty);
 		return empty;
 	}
 
-	public void removeStackOrFinish(@NonNull Activity activity, @NonNull Page page, @Nullable Runnable done) {
-		if (stack.size() <= 1) {
-			activity.finish();
-		} else {
-			page.onPause();
-			page.removeFromParent(done);
-			stack.remove(page);
-			refreshTopPage();
-			Page top = getTopPage();
-			if (top != null) {
-				top.onResume();
+	public boolean removeStackImmediately(@NonNull Page page) {
+		return removeStack(page, true, null);
+	}
+
+	public void removeStackOrFinish(
+		@NonNull Activity activity,
+		@NonNull Page page,
+		@Nullable Runnable done
+	) {
+		log("removeStackOrFinish:" + page);
+		if (removeStack(page, done)) {
+			if (cbFinish != null) {
+				cbFinish.run();
+			} else {
+				activity.finish();
 			}
 		}
 	}
 
-	public boolean backToStack(@NonNull Page page, @Nullable Runnable done) {
+	public boolean backToStack(@NonNull Page page) {
 		int size = stack.size();
-		for ( ; 0 < size; ) {
+		while (0 < size) {
 			int index = size - 1;
 			Page ref = stack.get(index);
 			if (ref == page) {
 				break;
 			}
-			removeStack(ref, done);
-			done = null;
+			removeStackImmediately(ref);
 			size = index;
 		}
 		refreshTopPage();
@@ -179,7 +217,10 @@ public final class PageManager implements Closeable {
 
 	public void gotoStack(@NonNull Page page, @Nullable Runnable done) {
 		if (stack.contains(page)) {
-			backToStack(page, done);
+			backToStack(page);
+			if (done != null) {
+				done.run();
+			}
 		} else {
 			addStack(page, done);
 		}
@@ -279,11 +320,15 @@ public final class PageManager implements Closeable {
 	}
 
 	public void changeLayout(int w, int h) {
-		Page page = getTopPage();
-		if (page != null && (mWidth != w || mHeight != h)) {
+		log("changeLayout:" + w + " " + h);
+		if (mWidth != w || mHeight != h) {
 			mWidth = w;
 			mHeight = h;
-			page.changeLayout(w, h);
+			Page page = getTopPage();
+			log("top:" + page);
+			if (page != null) {
+				page.changeLayout(w, h);
+			}
 		}
 	}
 
@@ -296,6 +341,18 @@ public final class PageManager implements Closeable {
 	public void disableDrawer() {
 		if (hamburger != null) {
 			hamburger.disableDrawer();
+		}
+	}
+
+	public void showBackIcon() {
+		if (hamburger != null) {
+			hamburger.showBackIcon();
+		}
+	}
+
+	public void showHamburgerIcon() {
+		if (hamburger != null) {
+			hamburger.showHamburgerIcon();
 		}
 	}
 

@@ -1,6 +1,8 @@
 <resources>
     <string name="ad">広告</string>
     <string name="action_cancel">cancel</string>
+    <string name="cancel">CANCEL</string>
+    <string name="ok">OK</string>
 
     <string name="progress_doing">処理中&#8230;</string>
     <string name="progress_canceled">canceled</string>
@@ -15,5 +17,10 @@
 
     <string name="color_action_done">done</string>
     <string name="color_picker">color picker</string>
+
+    <string name="log_action_clear_log">Clear</string>
+    <string name="log_action_save_log">Save</string>
+    <string name="log_title">log</string>
+    <string name="log_saving">saving…</string>
 
 </resources>

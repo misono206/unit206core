@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import app.misono.unit206.element.Element;
 import app.misono.unit206.misc.SavedPreferences;
 import app.misono.unit206.misc.UnitPref;
 
@@ -44,6 +43,26 @@ public abstract class AbstractPagePref implements PagePref {
 		this.page = page;
 		this.tagPref = tagPref;
 		units = new HashSet<>();
+	}
+
+	protected AbstractPagePref(
+		@NonNull Context context,
+		@Nullable Page page,
+		@NonNull String tagPref,
+		@NonNull UnitPref prefUnit
+	) {
+		this(context, page, tagPref);
+		units.add(prefUnit);
+	}
+
+	protected AbstractPagePref(
+		@NonNull Context context,
+		@Nullable Page page,
+		@NonNull String tagPref,
+		@NonNull Set<UnitPref> prefUnits
+	) {
+		this(context, page, tagPref);
+		units.addAll(prefUnits);
 	}
 
 	@Override
@@ -72,6 +91,9 @@ public abstract class AbstractPagePref implements PagePref {
 			String s = pref.getString(getKey(), null);
 			if (s != null) {
 				json = new JSONObject(s);
+				for (UnitPref unit1 : units) {
+					unit1.restorePref(json);
+				}
 			}
 		} catch (JSONException e) {
 			// nop
@@ -86,12 +108,11 @@ public abstract class AbstractPagePref implements PagePref {
 		@NonNull String key
 	) {
 		boolean rc = false;
-		JSONObject json = null;
 		try {
 			SavedPreferences pref = new SavedPreferences(context);
 			String s = pref.getString(getKey(tagPage, tagPref), null);
 			if (s != null) {
-				json = new JSONObject(s);
+				JSONObject json = new JSONObject(s);
 				rc = json.optBoolean(key, false);
 			}
 		} catch (JSONException e) {
@@ -101,19 +122,17 @@ public abstract class AbstractPagePref implements PagePref {
 	}
 
 	protected void applyPref(@NonNull JSONObject json) {
+		for (UnitPref unit1 : units) {
+			JSONObject j1 = unit1.createPref();
+			String key1 = unit1.getKey();
+			try {
+				json.put(key1, j1);
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+		}
 		pref.putString(getKey(), json.toString());
 		pref.apply();
-	}
-
-	protected void addUnitPref(@NonNull UnitPref prefUnit) {
-		units.add(prefUnit);
-	}
-
-	protected void addElement(@NonNull Element element) {
-		UnitPref prefUnit = element.getUnitPref();
-		if (prefUnit != null) {
-			units.add(prefUnit);
-		}
 	}
 
 }

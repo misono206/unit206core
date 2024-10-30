@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,19 @@
 
 package app.misono.unit206.misc;
 
-import android.app.Activity;
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Point;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
@@ -35,24 +37,20 @@ import android.util.Base64;
 import android.widget.ImageView;
 
 import androidx.annotation.AnyThread;
-import androidx.annotation.MainThread;
+import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 import androidx.appcompat.widget.AppCompatImageView;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.ColorUtils;
 import androidx.exifinterface.media.ExifInterface;
 
-import app.misono.unit206.R;
-import app.misono.unit206.admob.AdMobUtils;
 import app.misono.unit206.debug.Log2;
-import app.misono.unit206.page.Page;
-import app.misono.unit206.task.ObjectReference;
 import app.misono.unit206.task.Taskz;
 
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.google.android.material.snackbar.Snackbar;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -60,8 +58,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class ImageUtils {
 	private static final String TAG = "ImageUtils";
@@ -73,7 +69,7 @@ public class ImageUtils {
 		@NonNull byte[] data
 	) {
 		return Taskz.call(executor, () -> {
-			Bitmap bitmap = createBitmapResizeRotate(data, 0);
+			Bitmap bitmap = createBitmapResizeRotate(data, 0, false);
 			Tasks.await(Taskz.call(() -> {
 				image.setImageBitmap(bitmap);
 				return null;
@@ -90,7 +86,7 @@ public class ImageUtils {
 		@NonNull Uri uri
 	) {
 		return Taskz.call(executor, () -> {
-			Bitmap bitmap = readBitmapResizeRotate(image.getContext(), uri, 0);
+			Bitmap bitmap = readBitmapResizeRotate(image.getContext(), uri, 0, false);
 			Task<Void> task = Taskz.call(() -> {
 				image.setImageBitmap(bitmap);
 				return null;
@@ -113,9 +109,25 @@ public class ImageUtils {
 		});
 	}
 
+	@WorkerThread
+	public static void setImageAsync(
+		@NonNull ImageView image,
+		@NonNull byte[] data,
+		@Nullable Runnable done
+	) {
+		Bitmap bitmap = createBitmapResizeRotate(data, 0, false);
+		Taskz.call(() -> {
+			image.setImageBitmap(bitmap);
+			if (done != null) {
+				done.run();
+			}
+			return null;
+		}).addOnFailureListener(Taskz::printStackTrace2);
+	}
+
 	@NonNull
-	public static AppCompatImageView createFixedInsideImageView(@NonNull Activity activity) {
-		AppCompatImageView rc = new AppCompatImageView(activity);
+	public static AppCompatImageView createFixedInsideImageView(@NonNull Context context) {
+		AppCompatImageView rc = new AppCompatImageView(context);
 		rc.setAdjustViewBounds(true);
 		rc.setScaleType(ImageView.ScaleType.FIT_CENTER);
 		return rc;
@@ -156,9 +168,14 @@ public class ImageUtils {
 
 	@WorkerThread
 	@NonNull
-	public static Bitmap createBitmap(@NonNull RenderScript rs, @NonNull Allocation in,
-			int x, int y, int w, int h) {
-
+	public static Bitmap createBitmap(
+		@NonNull RenderScript rs,
+		@NonNull Allocation in,
+		int x,
+		int y,
+		int w,
+		int h
+	) {
 		Type type = new Type.Builder(rs, Element.U8_4(rs)).setX(w).setY(h).create();
 		Allocation argb = Allocation.createTyped(rs, type);
 		argb.copy2DRangeFrom(0, 0, w, h, in, x, y);
@@ -168,9 +185,13 @@ public class ImageUtils {
 	}
 
 	@WorkerThread
-	public static void copyToBitmap(@NonNull RenderScript rs, @NonNull Allocation in,
-			int x, int y, @NonNull Bitmap bitmap) {
-
+	public static void copyToBitmap(
+		@NonNull RenderScript rs,
+		@NonNull Allocation in,
+		int x,
+		int y,
+		@NonNull Bitmap bitmap
+	) {
 		int w = bitmap.getWidth();
 		int h = bitmap.getHeight();
 		Type type = new Type.Builder(rs, Element.U8_4(rs)).setX(w).setY(h).create();
@@ -233,21 +254,27 @@ public class ImageUtils {
 		@NonNull Executor executor,
 		@NonNull Context context,
 		@NonNull Uri uri,
-		int pixel
+		int pixel,
+		boolean mutable
 	) {
 		return Taskz.call(executor, () -> {
-			return readBitmapResizeRotate(context, uri, pixel);
+			return readBitmapResizeRotate(context, uri, pixel, mutable);
 		});
 	}
 
 	@WorkerThread
 	@Nullable
-	public static Bitmap readBitmapResizeRotate(@NonNull Context context, @NonNull Uri uri, int pixel) {
+	public static Bitmap readBitmapResizeRotate(
+		@NonNull Context context,
+		@NonNull Uri uri,
+		int pixel,
+		boolean mutable
+	) {
 		byte[] binary = Utils.readBytes(context, uri);
 		Bitmap rc = null;
 		if (binary != null) {
 			int rotateDegree = getImageRotateDegree(context, uri);
-			rc = decodeBitmapResizeRotate(binary, rotateDegree, pixel);
+			rc = decodeBitmapResizeRotate(binary, rotateDegree, mutable, pixel);
 		}
 		return rc;
 	}
@@ -257,24 +284,30 @@ public class ImageUtils {
 	public static Task<Bitmap> createBitmapResizeRotateTask(
 		@NonNull Executor executor,
 		@NonNull byte[] image,
-		int pixel
+		int pixel,
+		boolean mutable
 	) {
 		return Taskz.call(executor, () -> {
-			return createBitmapResizeRotate(image, pixel);
+			return createBitmapResizeRotate(image, pixel, mutable);
 		});
 	}
 
 	@WorkerThread
 	@Nullable
-	public static Bitmap createBitmapResizeRotate(@NonNull byte[] image, int pixel) {
+	public static Bitmap createBitmapResizeRotate(@NonNull byte[] image, int pixel, boolean mutable) {
 		int rotateDegree = getImageRotateDegree(image);
-		return decodeBitmapResizeRotate(image, rotateDegree, pixel);
+		return decodeBitmapResizeRotate(image, rotateDegree, mutable, pixel);
 	}
 
 	@WorkerThread
 	@Nullable
-	private static Bitmap decodeBitmapResizeRotate(@NonNull byte[] image, int rotateDegree, int pixel) {
-		return decodeBitmapResizeRotate(image, rotateDegree, pixel, true);
+	private static Bitmap decodeBitmapResizeRotate(
+		@NonNull byte[] image,
+		int rotateDegree,
+		boolean mutable,
+		int pixel
+	) {
+		return decodeBitmapResizeRotate(image, rotateDegree, pixel, true, mutable);
 	}
 
 	@WorkerThread
@@ -283,7 +316,8 @@ public class ImageUtils {
 		@NonNull byte[] image,
 		int rotateDegree,
 		int pixel,
-		boolean filter
+		boolean filter,
+		boolean mutable
 	) {
 		Bitmap rc = null;
 		Bitmap bitmap = decodeImageBestEffort(image);
@@ -313,8 +347,19 @@ public class ImageUtils {
 			matrix.postScale(scale, scale);
 
 			rc = Bitmap.createBitmap(bitmap, 0, 0, w, h, matrix, filter);
+			if (mutable) {
+				rc = toMutable(rc);
+			}
 		}
 		return rc;
+	}
+
+	@NonNull
+	public static Bitmap toMutable(@NonNull Bitmap bitmap) {
+		if (!bitmap.isMutable()) {
+			bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+		}
+		return bitmap;
 	}
 
 	@WorkerThread
@@ -350,60 +395,10 @@ public class ImageUtils {
 		return rc;
 	}
 
+	@Deprecated		// TODO Callback型にする
 	public interface ExecuteBitmap {
 		@WorkerThread
 		boolean run(@NonNull Bitmap bitmap) throws Exception;
-	}
-
-	@MainThread
-	@NonNull
-	public static Task<Bitmap> loadBitmapUriWithAdMobTask(
-		@NonNull Page page,
-		@NonNull Uri uri,
-		@NonNull String idInterstitial,
-		boolean showSnackResult,
-		@Nullable ExecuteBitmap exec
-	) {
-		ExecutorService executor = Executors.newCachedThreadPool();
-		ObjectReference<Snackbar> refSnack = new ObjectReference<>();
-		ObjectReference<Boolean> refSuccess = new ObjectReference<>();
-		Snackbar snack = page.showSnackProgress(R.string.progress_doing, R.string.action_cancel, cancel -> {
-			executor.shutdownNow();
-			refSnack.get().dismiss();
-			page.showSnackbar(R.string.progress_canceled);
-		});
-		refSnack.set(snack);
-		ThreadGate gate = new ThreadGate();
-		Context context = page.getContext();
-		AdMobUtils.showInterstitial(context, idInterstitial, gate::open);
-		return Taskz.call(executor, () -> {
-			Bitmap bitmap;
-			try {
-				bitmap = readBitmapResizeRotate(context, uri, 0);
-				boolean success = bitmap != null;
-				refSuccess.set(success);
-				if (success) {
-					if (exec != null) {
-						refSuccess.set(exec.run(bitmap));
-					}
-				}
-			} finally {
-				gate.block();
-			}
-			return bitmap;
-		}).addOnCompleteListener(task -> {
-			snack.dismiss();
-			if (showSnackResult) {
-				Boolean success = refSuccess.get();
-				if (success != null) {
-					if (success) {
-						page.showSnackbar(R.string.progress_loaded);
-					} else {
-						page.showSnackbar(R.string.progress_load_error);
-					}
-				}
-			}
-		});
 	}
 
 	public static int getLight(int argb, int colorLayerDown) {
@@ -424,10 +419,15 @@ public class ImageUtils {
 		return toByteArray(bitmap, Bitmap.CompressFormat.JPEG, quality);
 	}
 
-	public static String base64JpegForImageTag(@NonNull Bitmap bitmap) {
-		byte[] image = createJpeg(bitmap, 90);
+	public static String base64JpegForImageTag(@NonNull Bitmap bitmap, int quality) {
+		byte[] image = createJpeg(bitmap, quality);
 		String b64 = Base64.encodeToString(image, Base64.NO_WRAP);
 		return "data:image/jpeg;base64," + b64;
+	}
+
+	@Deprecated		// use above method (with int quality)
+	public static String base64JpegForImageTag(@NonNull Bitmap bitmap) {
+		return base64JpegForImageTag(bitmap, 90);
 	}
 
 	@NonNull
@@ -439,6 +439,88 @@ public class ImageUtils {
 		byte[] image = toByteArray(bitmap, Bitmap.CompressFormat.PNG, 100);
 		String b64 = Base64.encodeToString(image, Base64.NO_WRAP);
 		return "data:image/png;base64," + b64;
+	}
+
+	@NonNull
+	public static byte[] createWebp(@NonNull Bitmap bitmap, int quality) {
+		Bitmap.CompressFormat fmt;
+		if (30 <= Build.VERSION.SDK_INT) {
+			fmt = Bitmap.CompressFormat.WEBP_LOSSY;
+		} else {
+			fmt = Bitmap.CompressFormat.WEBP;
+		}
+		return toByteArray(bitmap, fmt, quality);
+	}
+
+	public static String base64WebpForImageTag(@NonNull Bitmap bitmap, int quality) {
+		byte[] image = createWebp(bitmap, quality);
+		return base64WebpForImageTag(image);
+	}
+
+	public static String base64WebpForImageTag(@NonNull byte[] image) {
+		String b64 = Base64.encodeToString(image, Base64.NO_WRAP);
+		return "data:image/webp;base64," + b64;
+	}
+
+	@NonNull
+	public static byte[] createLosslessWebp(@NonNull Bitmap bitmap) {
+		if (30 <= Build.VERSION.SDK_INT) {
+			return toByteArray(bitmap, Bitmap.CompressFormat.WEBP_LOSSLESS, 100);
+		} else {
+			return createWebp(bitmap, 100);
+		}
+	}
+
+	public static String base64LosslessWebpForImageTag(@NonNull Bitmap bitmap) {
+		if (30 <= Build.VERSION.SDK_INT) {
+			byte[] image = toByteArray(bitmap, Bitmap.CompressFormat.WEBP_LOSSLESS, 100);
+			return base64WebpForImageTag(image);
+		} else {
+			return base64WebpForImageTag(bitmap, 100);
+		}
+	}
+
+	public static String base64ForImageTag(
+		@NonNull byte[] image,
+		@NonNull Bitmap.CompressFormat fmt
+	) {
+		String b64 = Base64.encodeToString(image, Base64.NO_WRAP);
+		String type;
+		switch (fmt) {
+		case JPEG:
+			type = "jpeg";
+			break;
+		case PNG:
+			type = "png";
+			break;
+		case WEBP_LOSSLESS:
+		case WEBP:
+		case WEBP_LOSSY:
+			type = "webp";
+			break;
+		default:
+			throw new RuntimeException("unknown format:" + fmt);
+		}
+		return "data:image/" + type + ";base64," + b64;
+	}
+
+	@Nullable
+	public static String getImageSuffix(@NonNull Bitmap.CompressFormat format) {
+		String rc = null;
+		switch (format) {
+		case JPEG:
+			rc = "jpg";
+			break;
+		case PNG:
+			rc = "png";
+			break;
+		case WEBP:
+		case WEBP_LOSSLESS:
+		case WEBP_LOSSY:
+			rc = "webp";
+			break;
+		}
+		return rc;
 	}
 
 	@WorkerThread
@@ -560,6 +642,129 @@ public class ImageUtils {
 				// nop
 			}
 		}
+	}
+
+	@WorkerThread
+	@Nullable
+	public static Bitmap ppm2bitmap(@NonNull byte[] b) {
+		String s;
+		StringBuilder sb = new StringBuilder();
+		int idx = 0;
+
+		idx = readLine(b, idx, sb);
+		s = sb.toString();
+		if (!s.contentEquals("P6")) {
+			log("ppm2bitmap:not P6:" + s);
+			return null;
+		}
+
+		idx = readLine(b, idx, sb);
+		s = sb.toString();
+		String[] sp = s.split(" ");
+		if (sp.length != 2) {
+			log("ppm2bitmap:not 2 item:" + sp.length + ":" + s);
+			return null;
+		}
+		int width = Integer.parseInt(sp[0]);
+		int height = Integer.parseInt(sp[1]);
+
+		idx = readLine(b, idx, sb);
+		s = sb.toString();
+		if (!s.contentEquals("255")) {
+			log("ppm2bitmap:not 255:" + s);
+			return null;
+		}
+
+		int[] colors = new int[width * height];
+		int[] rgb = new int[3];
+		int cc = 0;
+		int total = 0;
+		while (idx < b.length) {
+			rgb[cc++] = b[idx++] & 0xff;
+			if (cc == 3) {
+				cc = 0;
+				colors[total++] = Color.rgb(rgb[0], rgb[1], rgb[2]);
+			}
+		}
+		return Bitmap.createBitmap(colors, width, height, Bitmap.Config.ARGB_8888);
+	}
+
+	private static int readLine(@NonNull byte[] b, int idx, @NonNull StringBuilder out) {
+		out.setLength(0);
+		while (idx < b.length) {
+			char c = (char)b[idx++];
+			if (c == '\n') {
+				return idx;
+			}
+			out.append(c);
+		}
+		return idx;
+	}
+
+	@NonNull
+	public static Bitmap leftright(@NonNull Bitmap src) {
+		int w = src.getWidth();
+		int h = src.getHeight();
+		Matrix leftright = new Matrix();
+		leftright.setScale(-1, 1);
+		leftright.postTranslate(w, 0);
+		return Bitmap.createBitmap(
+			src,
+			0,
+			0,
+			w,
+			h,
+			leftright,
+			true
+		);
+	}
+
+	public static void drawShadowText(
+		@NonNull Canvas canvas,
+		@NonNull String text,
+		float x,
+		float y,
+		int offsetShadow,
+		@NonNull Paint paint,
+		int colorShadow
+	) {
+		int colorText = paint.getColor();
+		paint.setColor(colorShadow);
+		for (int dy = -offsetShadow; dy <= offsetShadow; dy++) {
+			for (int dx = -offsetShadow; dx <= offsetShadow; dx++) {
+				if (dx != 0 && dy != 0) {
+					canvas.drawText(text, x + dx, y + dy, paint);
+				}
+			}
+		}
+		paint.setColor(colorText);
+		canvas.drawText(text, x, y, paint);
+	}
+
+	@NonNull
+	public static Bitmap createBitmap(@NonNull Drawable d, int w, int h, int colorBg) {
+		Bitmap rc = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+		rc.eraseColor(colorBg);
+		Canvas canvas = new Canvas(rc);
+		d.setBounds(0, 0, w, h);
+		d.draw(canvas);
+		return rc;
+	}
+
+	@Nullable
+	public static Bitmap createBitmapIcon(
+		@NonNull Context context,
+		@DrawableRes int idDrawable,
+		int pxSize,
+		int colorBg
+	) {
+		Bitmap rc = null;
+		Resources r = context.getResources();
+		Drawable d = ResourcesCompat.getDrawable(r, idDrawable, null);
+		if (d != null) {
+			rc = createBitmap(d, pxSize, pxSize, colorBg);
+		}
+		return rc;
 	}
 
 	private static void log(@NonNull String msg) {

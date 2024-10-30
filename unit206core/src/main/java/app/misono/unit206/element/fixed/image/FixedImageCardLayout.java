@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ class FixedImageCardLayout implements FixedCardLayout<
 
 	private int m;
 	private int wPixel, hPixel;
-	private int width, height, sizeText, hText, hImage;
+	private int width, height, sizeText, hText, hImage, hChecked;
 
 	FixedImageCardLayout(int margin) {
 		m = margin;
@@ -48,9 +48,10 @@ class FixedImageCardLayout implements FixedCardLayout<
 		width = w - m * 2;
 		height = h - m * 2;
 //		hText = h / 10;
-		hText = 0;	// TODO
+		hText = 0;	// TODO: とりあえず textなし
 		sizeText = hText / 2;
 		hImage = height - hText;
+		hChecked = (int)(height * 0.2f);
 	}
 
 	@Override
@@ -86,6 +87,12 @@ class FixedImageCardLayout implements FixedCardLayout<
 		p.topMargin = hText;
 		p.gravity = Gravity.START | Gravity.TOP;
 		card.image.setLayoutParams(p);
+
+		p = (FrameLayout.LayoutParams)card.checked.getLayoutParams();
+		p.width = hChecked;
+		p.height = hChecked;
+		p.gravity = Gravity.END | Gravity.TOP;
+		card.checked.setLayoutParams(p);
 	}
 
 	@Override

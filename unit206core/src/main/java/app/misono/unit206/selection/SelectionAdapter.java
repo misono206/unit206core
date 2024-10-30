@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,14 +35,15 @@ public abstract class SelectionAdapter<T extends LongId, VH extends LongIdViewHo
 	protected ISelection<T> mSelection;
 	protected boolean mPortrait;
 	protected boolean mSquare;
+	protected float mCountItem;
+	protected float ratioPortY, ratioLandY;
 	protected int mWidth;
 	protected int mHeight;
-	protected int mCountItem;
 	protected int mLandCountX, mPortCountX;
-	protected int pxMinHeight;
+	protected int pxMinHeight, pxMaxHeight;
 
 	public SelectionAdapter(
-		int nItem,
+		float nItem,
 		int nLandX,
 		@NonNull DiffUtil.ItemCallback<T> diffCallback,
 		@Nullable SelectionListener<T> listener
@@ -62,7 +63,7 @@ public abstract class SelectionAdapter<T extends LongId, VH extends LongIdViewHo
 	 */
 	public SelectionAdapter(
 		boolean square,
-		int nItem,
+		float nItem,
 		int nPortX,
 		int nLandX,
 		@NonNull DiffUtil.ItemCallback<T> diffCallback,
@@ -77,9 +78,31 @@ public abstract class SelectionAdapter<T extends LongId, VH extends LongIdViewHo
 		setHasStableIds(true);
 	}
 
+	public SelectionAdapter(
+		float ratioPortY,
+		float ratioLandY,
+		@NonNull DiffUtil.ItemCallback<T> diffCallback,
+		@Nullable SelectionListener<T> listener
+	) {
+		super(diffCallback);
+		this.ratioPortY = ratioPortY;
+		this.ratioLandY = ratioLandY;
+		mSquare = false;
+		mCountItem = 0;
+		mPortCountX = 1;
+		mLandCountX = 1;
+		mListener = listener;
+		setHasStableIds(true);
+	}
+
 	public void setMinHeightMm(@NonNull Context context, float mmHeight) {
 		float ydpi = context.getResources().getDisplayMetrics().ydpi;
 		pxMinHeight = (int)(ydpi * mmHeight / 25.4f);
+	}
+
+	public void setMaxHeightMm(@NonNull Context context, float mmHeight) {
+		float ydpi = context.getResources().getDisplayMetrics().ydpi;
+		pxMaxHeight = (int)(ydpi * mmHeight / 25.4f);
 	}
 
 	public void setSelection(@NonNull ISelection<T> selection) {
@@ -108,14 +131,25 @@ public abstract class SelectionAdapter<T extends LongId, VH extends LongIdViewHo
 			} else {
 				if (mPortrait) {
 					w1 = mWidth / mPortCountX;
-					h1 = mHeight / (mCountItem / mPortCountX);
+					if (mCountItem != 0) {
+						h1 = (int)(mHeight / (mCountItem / mPortCountX));
+					} else {
+						h1 = (int)(mWidth * ratioPortY);
+					}
 				} else {
 					w1 = mWidth / mLandCountX;
-					h1 = mHeight / (mCountItem / mLandCountX);
+					if (mCountItem != 0) {
+						h1 = (int)(mHeight / (mCountItem / mLandCountX));
+					} else {
+						h1 = (int)(mWidth * ratioLandY);
+					}
 				}
 			}
 			if (pxMinHeight != 0) {
 				h1 = Math.max(h1, pxMinHeight);
+			}
+			if (pxMaxHeight != 0) {
+				h1 = Math.min(h1, pxMaxHeight);
 			}
 			view.setItem(item, w1, h1, mSelection.isSelected(item.getLongId()));
 			view.setOnClickListener(v -> {

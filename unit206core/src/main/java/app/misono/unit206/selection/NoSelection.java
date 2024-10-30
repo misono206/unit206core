@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,9 +131,9 @@ public final class NoSelection<T extends LongId> implements ISelection<T>, PageP
 	}
 
 	@NonNull
-	public static RecyclerView createRecyclerView(
+	public static <VH extends RecyclerView.ViewHolder> RecyclerView createRecyclerView(
 		@NonNull Context context,
-		@NonNull RecyclerView.Adapter adapter,
+		@NonNull RecyclerView.Adapter<VH> adapter,
 		int bgColor
 	) {
 		RecyclerView recycler = new RecyclerView(context);

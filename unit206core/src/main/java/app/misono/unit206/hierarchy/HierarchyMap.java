@@ -23,6 +23,7 @@ import androidx.annotation.Nullable;
 
 import java.util.List;
 
+@Deprecated
 public class HierarchyMap<E extends HierarchyItem> {
 	protected final SparseArray<E> map;
 	protected final HierarchyItem root;

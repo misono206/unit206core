@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,23 +34,31 @@ import com.google.android.material.card.MaterialCardView;
 public class IconPressView extends MaterialCardView {
 	private static final String TAG = "IconPressView";
 
-	private AppCompatImageView image;
+	private final AppCompatImageView image;
+
 	private Runnable cbPressed, cbReleased;
 	private boolean enable;
 
 	public IconPressView(@NonNull Context context) {
 		super(context);
-		init(context);
+		image = new AppCompatImageView(context);
+		init();
 	}
 
 	public IconPressView(@NonNull Context context, @NonNull AttributeSet attr) {
 		super(context, attr);
-		init(context);
+		image = new AppCompatImageView(context, attr);
+		init();
 	}
 
-	private void init(@NonNull Context context) {
+	public IconPressView(@NonNull Context context, AttributeSet attr, int defStyleAttr) {
+		super(context, attr, defStyleAttr);
+		image = new AppCompatImageView(context, attr, defStyleAttr);
+		init();
+	}
+
+	private void init() {
 		enable = true;
-		image = new AppCompatImageView(context);
 		image.setAdjustViewBounds(true);
 		image.setScaleType(ImageView.ScaleType.FIT_CENTER);
 		addView(image, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);

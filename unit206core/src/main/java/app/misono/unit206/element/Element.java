@@ -16,6 +16,7 @@
 
 package app.misono.unit206.element;
 
+import android.view.View;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
@@ -24,7 +25,9 @@ import androidx.annotation.Nullable;
 import app.misono.unit206.misc.UnitPref;
 
 public interface Element {
-	void setLayoutParams(@NonNull FrameLayout.LayoutParams params);
+	void changeLayout(int width, int height);
+	@NonNull
+	View getView();
 	void onResume();
 	void onPause();
 	@Nullable

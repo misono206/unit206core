@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,11 @@ import androidx.annotation.WorkerThread;
 
 import app.misono.unit206.debug.Log2;
 
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @RequiresApi(21)
@@ -171,7 +175,7 @@ public class NetUtils {
 	}
 
 	/**
-	 * Android 6.0のバグ対応
+	 * Android 6.0のバグ対応.
 	 * https://stackoverflow.com/questions/32185628/connectivitymanager-requestnetwork-in-android-6-0
 	 *
 	 * Require: android.permission.ACCESS_NETWORK_STATE
@@ -199,6 +203,63 @@ public class NetUtils {
 			}
 		}
 		return available;
+	}
+
+	@Nullable
+	public static String getWifiIpAddress(boolean ipv4) {
+		try {
+			List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+			for (NetworkInterface intf : interfaces) {
+				List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+				for (InetAddress addr : addrs) {
+					if (!addr.isLoopbackAddress()) {
+						String sAddr = addr.getHostAddress();
+						if (sAddr != null) {
+							boolean isIPv4 = sAddr.indexOf(':') < 0;
+							if (ipv4) {
+								if (isIPv4) {
+									return sAddr;
+								}
+							} else {
+								if (!isIPv4) {
+									int delim = sAddr.indexOf('%'); // drop ip6 zone suffix
+									return delim < 0 ? sAddr.toUpperCase() : sAddr.substring(0, delim).toUpperCase();
+								}
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception ignored) { } // for now eat exceptions
+		return null;
+	}
+
+	@NonNull
+	public static InetAddress getWifiInetAddress(boolean ipv4) {
+		try {
+			List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+			for (NetworkInterface intf : interfaces) {
+				List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+				for (InetAddress addr : addrs) {
+					if (!addr.isLoopbackAddress()) {
+						String sAddr = addr.getHostAddress();
+						if (sAddr != null) {
+							boolean isIPv4 = sAddr.indexOf(':') < 0;
+							if (ipv4) {
+								if (isIPv4) {
+									return addr;
+								}
+							} else {
+								if (!isIPv4) {
+									return addr;
+								}
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception ignored) { } // for now eat exceptions
+		return null;
 	}
 
 	private static void log(@NonNull String msg) {

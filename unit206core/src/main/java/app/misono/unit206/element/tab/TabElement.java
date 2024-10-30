@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package app.misono.unit206.element.tab;
 import android.content.Context;
 import android.graphics.Color;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -118,11 +119,18 @@ Log.e(TAG, "COME:");
 		listeners.remove(listener);
 	}
 
-	private void setPixelSize(int wPixel, int hPixel) {
+	@Override
+	public void changeLayout(int wPixel, int hPixel) {
 		ViewGroup.LayoutParams p1 = base.getLayoutParams();
 		p1.width = wPixel;
 		p1.height = hPixel;
 		base.requestLayout();
+	}
+
+	@Override
+	@NonNull
+	public View getView() {
+		return base;
 	}
 
 	@Override
@@ -131,11 +139,6 @@ Log.e(TAG, "COME:");
 
 	@Override
 	public void onPause() {
-	}
-
-	@Override
-	public void setLayoutParams(@NonNull FrameLayout.LayoutParams params) {
-		setPixelSize(params.width, params.height);
 	}
 
 	@Override
@@ -154,7 +157,9 @@ Log.e(TAG, "COME:");
 			int min = Math.min(n, n2);
 			for (int i = 0; i < min; i++) {
 				TabLayout.Tab tab = tabs.getTabAt(i);
-				tab.setText(titles.get(i));
+				if (tab != null) {
+					tab.setText(titles.get(i));
+				}
 			}
 			if (n < n2) {
 				for (int i = min; i < n2; i++) {

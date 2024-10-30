@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 
 public interface TableCardItem {
+	boolean isClickable();
 	@NonNull
 	View createView(@NonNull Context context, int row, int column, @NonNull TableTdParam param);
 

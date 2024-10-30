@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +68,7 @@ public final class Rand {
 		return rand;
 	}
 
+	@Deprecated	// ここじゃない
 	public static int calcHashInt(@NonNull byte[] buf) {
 		MessageDigest ctx = null;
 		int hash = 0;

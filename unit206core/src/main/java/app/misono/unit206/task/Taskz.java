@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,9 +55,12 @@ public class Taskz {
 			return callUnCatch(executor, null, callable);
 		} catch (Exception e) {
 			return Tasks.forException(e);
+		} catch (Throwable e) {
+			return Tasks.forException(new RuntimeException(e));
 		}
 	}
 
+	@Deprecated	// 自分でやるべき
 	@MainThread
 	@NonNull
 	public static <T> Task<T> call(
@@ -168,18 +171,6 @@ public class Taskz {
 		boolean rc = e != null && !(e instanceof InterruptedException);
 		if (rc) {
 			e.printStackTrace();
-		}
-		return rc;
-	}
-
-	@AnyThread
-	public static boolean snackStackTrace2(@Nullable Throwable e, @NonNull View base) {
-		boolean rc = printStackTrace2(e);
-		if (rc && e != null) {
-			Taskz.call(TaskExecutors.MAIN_THREAD, () -> {
-				Snackbar.make(base, e.toString(), Snackbar.LENGTH_SHORT).show();
-				return null;
-			});
 		}
 		return rc;
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package app.misono.unit206.element.fixed.image;
 
-import android.annotation.SuppressLint;
-import android.text.TextUtils;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -28,6 +26,7 @@ import app.misono.unit206.debug.Log2;
 import app.misono.unit206.element.fixed.FixedAdapter;
 import app.misono.unit206.misc.ItemClickListener;
 
+@Deprecated		// create the your adapter class.
 class FixedImageAdapter extends FixedAdapter<
 	FixedImageCardView,
 	FixedImageCardLayout,
@@ -37,31 +36,42 @@ class FixedImageAdapter extends FixedAdapter<
 	private static final String TAG = "FixedImageAdapter";
 
 	private final ItemClickListener<FixedImageItem> clicked;
+	private final FixedImageCallback cbNoBitmap;
 
-	private int mSizeIcon, mSizeText, mMargin, mPadding;
+	private boolean fitCenter;
 
-	FixedImageAdapter(@Nullable Runnable refresh, @Nullable ItemClickListener<FixedImageItem> clicked) {
+	FixedImageAdapter(
+		@NonNull FixedImageCallback cbNoBitmap,
+		boolean fitCenter,
+		@Nullable Runnable refresh,
+		@Nullable ItemClickListener<FixedImageItem> clicked
+	) {
 		super(diffCallback, refresh);
+		this.fitCenter = fitCenter;
+		this.cbNoBitmap = cbNoBitmap;
 		this.clicked = clicked;
-	}
-
-	void setParams(int sizeIcon, int sizeText, int margin, int padding) {
-		mSizeIcon = sizeIcon;
-		mSizeText = sizeText;
-		mMargin = margin;
-		mPadding = padding;
 	}
 
 	@Override
 	@NonNull
 	public FixedImageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 		FixedImageCardView view = new FixedImageCardView(parent.getContext());
+		if (fitCenter) {
+			view.setScaleTypeFitCenter();
+		}
 		if (clicked != null) {
 			view.setOnClickListener(v -> {
 				clicked.onClicked(((FixedImageCardView)v).getItem());
 			});
 		}
 		return new FixedImageViewHolder(view);
+	}
+
+	@Override
+	public void onBindViewHolder(@NonNull FixedImageViewHolder holder, int position) {
+		FixedImageCardView view = holder.getView();
+		view.setNoBitmapCallback(cbNoBitmap);
+		super.onBindViewHolder(holder, position);
 	}
 
 	private void log(@NonNull String msg) {
@@ -74,12 +84,9 @@ class FixedImageAdapter extends FixedAdapter<
 			return item1.getLongId() == item2.getLongId();
 		}
 
-		@SuppressLint("DiffUtilEquals")
 		@Override
 		public boolean areContentsTheSame(FixedImageItem item1, FixedImageItem item2) {
-			return item1.getLongId() == item2.getLongId()
-				&& item1.peekBitmap() == item2.peekBitmap()
-				&& TextUtils.equals(item1.getName(), item2.getName());
+			return item1.getModifiedTime() == item2.getModifiedTime();
 		}
 	};
 

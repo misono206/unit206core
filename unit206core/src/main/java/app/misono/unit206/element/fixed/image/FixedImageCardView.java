@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,59 +19,85 @@ package app.misono.unit206.element.fixed.image;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.ImageView;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatImageView;
-import androidx.appcompat.widget.AppCompatTextView;
 
 import app.misono.unit206.element.fixed.FixedCardView;
-import app.misono.unit206.task.Taskz;
 
-class FixedImageCardView extends FixedCardView<
+import com.google.android.material.textview.MaterialTextView;
+
+public class FixedImageCardView extends FixedCardView<
 	FixedImageCardView,
 	FixedImageCardLayout,
 	FixedImageItem
 > {
 	private static final String TAG = "FixedImageCardView";
 
-	AppCompatImageView image;
-	AppCompatTextView text;
+	final AppCompatImageView image;
+	final AppCompatImageView checked;
+	final MaterialTextView text;
 
+	private FixedImageCallback cbNoBitmap;		// TODO: ちょっと違う感じ
 	private FixedImageItem item;
 
 	FixedImageCardView(@NonNull Context context) {
 		super(context);
+		text = new MaterialTextView(context);
+		image = new AppCompatImageView(context);
+		checked = new AppCompatImageView(context);
+		init();
 	}
 
 	FixedImageCardView(@NonNull Context context, @NonNull AttributeSet attr) {
 		super(context, attr);
+		text = new MaterialTextView(context, attr);
+		image = new AppCompatImageView(context, attr);
+		checked = new AppCompatImageView(context, attr);
+		init();
 	}
 
-	@Override
-	public void init(@NonNull Context context) {
-		setCardBackgroundColor(Color.LTGRAY); // TODO: AppColor
-		text = new AppCompatTextView(context);
+	private void init() {
 		text.setTextColor(Color.YELLOW);
 		text.setSingleLine();
 		text.setEllipsize(TextUtils.TruncateAt.END);
 		text.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-		addView(text);
-		image = new AppCompatImageView(context);
+		addView(text, new LayoutParams(0, 0));
+
 		image.setAdjustViewBounds(true);
 		image.setScaleType(ImageView.ScaleType.CENTER_CROP);
-		addView(image);
+		addView(image, new LayoutParams(0, 0));
+
+		checked.setAdjustViewBounds(true);
+		checked.setScaleType(ImageView.ScaleType.FIT_CENTER);
+		addView(checked, new LayoutParams(0, 0));
+	}
+
+	void setNoBitmapCallback(@NonNull FixedImageCallback callback) {
+		cbNoBitmap = callback;
 	}
 
 	@MainThread
-	private void addBitmap(@NonNull Bitmap bitmap) {
+	public void setBitmap(@Nullable Bitmap bitmap) {
 		image.setImageBitmap(bitmap);
+	}
+
+	@MainThread
+	public void setCheckedDrawable(@Nullable Drawable d) {
+		checked.setImageDrawable(d);
+	}
+
+	@MainThread
+	public void setCheckedBitmap(@Nullable Bitmap bitmap) {
+		checked.setImageBitmap(bitmap);
 	}
 
 	@NonNull
@@ -79,23 +105,31 @@ class FixedImageCardView extends FixedCardView<
 		return item;
 	}
 
+	public void setScaleTypeFitCenter() {
+		image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+	}
+
 	@Override
 	public void setItem(@NonNull FixedImageItem item) {
-Log.e(TAG, "setItem:" + item.getName());
 		this.item = item;
+
+		image.setImageBitmap(null);
+		checked.setImageBitmap(null);
+
 		String name = item.getName();
 		if (name != null) {
 			text.setText(name);
 		} else {
 			text.setVisibility(View.GONE);
 		}
-		item.getBitmap().addOnCompleteListener(task -> {
-			if (task.isSuccessful()) {
-				addBitmap(task.getResult());
-			} else {
-				Taskz.printStackTrace2(task.getException());
+		Bitmap bitmap = item.getBitmap();
+		if (bitmap != null) {
+			setBitmap(bitmap);
+		} else {
+			if (cbNoBitmap != null) {
+				cbNoBitmap.callback(this, item);
 			}
-		});
+		}
 	}
 
 }

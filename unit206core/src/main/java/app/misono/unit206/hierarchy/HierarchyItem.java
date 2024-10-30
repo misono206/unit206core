@@ -22,6 +22,7 @@ import java.util.Set;
 
 import org.json.JSONArray;
 
+@Deprecated		//	change to LineageItem
 public interface HierarchyItem extends Cloneable {
 	@NonNull
 	HierarchyMutableItem clone();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,11 +56,11 @@ public class MediaStoreUtils {
 			Uri collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
 			Uri item = resolver.insert(collection, values);
 
-			BufferedInputStream is = null;
-			OutputStream os = null;
-			try {
-				is = new BufferedInputStream(new FileInputStream(file));
-				os = resolver.openOutputStream(item);
+			try (
+				FileInputStream fis = new FileInputStream(file);
+				BufferedInputStream is = new BufferedInputStream(fis);
+				OutputStream os = resolver.openOutputStream(item);
+			) {
 				byte[] b = new byte[4096];
 				for ( ; ; ) {
 					int len = is.read(b);
@@ -69,18 +69,10 @@ public class MediaStoreUtils {
 					}
 					os.write(b, 0, len);
 				}
-				os.close();
-				os = null;
-				is.close();
-				is = null;
 			} catch (IOException e) {
-				Utils.closeSafely(is);
-				Utils.closeSafely(os);
 				resolver.delete(item, null, null);
 				throw e;
 			}
-			Utils.closeSafely(is);
-			Utils.closeSafely(os);
 			values.clear();
 			values.put(MediaStore.Images.Media.IS_PENDING, 0);
 			resolver.update(item, values, null, null);

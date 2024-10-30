@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2023 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package app.misono.unit206.element.table;
+package app.misono.unit206.tts;
 
 import androidx.annotation.NonNull;
 
-public interface TableTrListener<T> {
-	void onClick(@NonNull T item);
+public interface TtsVoice {
+	@NonNull
+	Object getVoiceInstance();
 
 }

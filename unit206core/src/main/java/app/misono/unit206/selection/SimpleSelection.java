@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,10 +70,14 @@ public final class SimpleSelection<T extends LongId> implements ISelection<T>, P
 	) {
 		mManager = recycler.getLayoutManager();
 		mProvider = new LongIdKeyProvider();
-		mTracker = new SelectionTracker.Builder<>(tag, recycler, mProvider,
-				new ItemIdLookup(recycler), StorageStrategy.createLongStorage()
+		mTracker = new SelectionTracker.Builder<>(
+			tag,
+			recycler,
+			mProvider,
+			new ItemIdLookup(recycler),
+			StorageStrategy.createLongStorage()
 		).withSelectionPredicate(
-				SelectionPredicates.createSelectAnything()
+			SelectionPredicates.createSelectAnything()
 		).build();
 		mSelected = new LongSparseArray<>();
 		RecyclerView.Adapter adapter = recycler.getAdapter();
@@ -214,7 +218,6 @@ public final class SimpleSelection<T extends LongId> implements ISelection<T>, P
 	}
 
 	@Override
-	@Nullable
 	public Bundle createBundle() {
 		Bundle b = new Bundle();
 		mTracker.onSaveInstanceState(b);
@@ -240,7 +243,7 @@ public final class SimpleSelection<T extends LongId> implements ISelection<T>, P
 	}
 
 	private static class ItemIdLookup extends ItemDetailsLookup<Long> {
-		private RecyclerView mRecycler;
+		private final RecyclerView mRecycler;
 
 		private ItemIdLookup(@NonNull RecyclerView recycler) {
 			super();
@@ -274,9 +277,9 @@ public final class SimpleSelection<T extends LongId> implements ISelection<T>, P
 	}
 
 	@NonNull
-	public static RecyclerView createRecyclerView(
+	public static <VH extends RecyclerView.ViewHolder> RecyclerView createRecyclerView(
 		@NonNull Context context,
-		@NonNull RecyclerView.Adapter adapter,
+		@NonNull RecyclerView.Adapter<VH> adapter,
 		int bgColor
 	) {
 		RecyclerView recycler = new RecyclerView(context);

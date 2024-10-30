@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +17,47 @@
 package app.misono.unit206.page;
 
 import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import androidx.annotation.AnyThread;
 import androidx.annotation.DrawableRes;
+import androidx.annotation.MainThread;
+import androidx.annotation.MenuRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.res.ResourcesCompat;
 
+import app.misono.unit206.callback.CallbackMenu;
 import app.misono.unit206.debug.Log2;
-import app.misono.unit206.misc.BlockClick;
+import app.misono.unit206.element.Element;
+import app.misono.unit206.misc.ImageUtils;
+import app.misono.unit206.misc.Saf;
 import app.misono.unit206.misc.Views;
 import app.misono.unit206.task.Taskz;
 
-import com.google.android.gms.ads.AdView;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
+
+import java.io.File;
+import java.util.HashSet;
+import java.util.Set;
 
 public abstract class AbstractPage implements Page {
 	private static final String TAG = "AbstractPage";
@@ -53,46 +70,73 @@ public abstract class AbstractPage implements Page {
 	protected FrameLayout mBase;
 	protected PageManager manager;
 	protected Runnable mClickBack;
-	protected AdView mAdView;
 	protected boolean mPortrait;
+	protected float dp1;
 	protected int mWidth;
 	protected int mHeightAdBase;
 	protected int mHeight;
 
+	private final SparseArray<Runnable> menues;
 	private final FrameAnimator animator;
+	private final Set<Element> elements;
 
+	private CallbackMenu cbMenu;
 	private PagePref pref;
 	private View smoke;
+	private Saf saf;
 	private boolean enableToolbar;
+	private boolean isHamburgerIcon;
+	private int idMenu;
+	private int hAdView;
 
+	@Deprecated
 	protected AbstractPage(
 		@NonNull PageManager manager,
 		@NonNull PageActivity activity,
-		@NonNull FrameLayout adbase,
 		@NonNull FrameLayout parent,
-		@Nullable AdView adview,
 		@Nullable Runnable clickBack
 	) {
-		this(manager, activity, adbase, parent, adview, 150, clickBack);
+		this(manager, activity, parent, 150, clickBack);
 	}
 
+	@Deprecated
 	protected AbstractPage(
 		@NonNull PageManager manager,
 		@NonNull PageActivity activity,
-		@NonNull FrameLayout adbase,
 		@NonNull FrameLayout parent,
-		@Nullable AdView adview,
 		int msecAnimator,
 		@Nullable Runnable clickBack
 	) {
-		this.manager = manager;
+		this(activity, 150, clickBack);
+	}
+
+	protected AbstractPage(
+		@NonNull PageActivity activity,
+		@Nullable Runnable clickBack
+	) {
+		this(activity, 150, clickBack);
+	}
+
+	protected AbstractPage(
+		@NonNull PageActivity activity,
+		int msecAnimator,
+		@Nullable Runnable clickBack
+	) {
 		this.activity = activity;
+		manager = activity.getPageManager();
+		mParent = activity.getParentView();
+		mAdBase = mParent;
 		mClickBack = clickBack;
-		mAdBase = adbase;
-		mParent = parent;
-		mAdView = adview;
 		enableToolbar = true;
-		mBase = new FrameLayout(parent.getContext());
+		isHamburgerIcon = true;
+		menues = new SparseArray<>();
+		elements = new HashSet<>();
+		dp1 = TypedValue.applyDimension(
+			TypedValue.COMPLEX_UNIT_DIP,
+			1,
+			activity.getResources().getDisplayMetrics()
+		);
+		mBase = new FrameLayout(mParent.getContext());
 		mBase.setOnClickListener(null);
 		if (msecAnimator != 0) {
 			animator = new FrameAnimator(msecAnimator);
@@ -101,29 +145,18 @@ public abstract class AbstractPage implements Page {
 		}
 	}
 
-	protected AbstractPage(
-		@NonNull PageManager manager,
-		@NonNull PageActivity activity,
-		@NonNull FrameLayout parent,
-		@Nullable Runnable clickBack
-	) {
-		this(manager, activity, parent, parent, null, clickBack);
-	}
-
-	protected AbstractPage(
-		@NonNull PageManager manager,
-		@NonNull PageActivity activity,
-		@NonNull FrameLayout parent,
-		int msecAnimator,
-		@Nullable Runnable clickBack
-	) {
-		this(manager, activity, parent, parent, null, msecAnimator, clickBack);
-	}
-
 	@Override
 	@NonNull
 	public FrameLayout getBaseView() {
 		return mBase;
+	}
+
+	protected void addElement(@NonNull Element element) {
+		elements.add(element);
+	}
+
+	protected void removeElement(@Nullable Element element) {
+		elements.remove(element);
 	}
 
 	protected void enableToolbar(boolean enable) {
@@ -167,26 +200,37 @@ public abstract class AbstractPage implements Page {
 		return activity;
 	}
 
+	protected void setBackIcon() {
+		isHamburgerIcon = false;
+	}
+
+	protected void setHamburgerIcon() {
+		isHamburgerIcon = true;
+	}
+
 	@Override
 	public boolean isHamburgerIcon() {
-		return true;
+		return isHamburgerIcon;
+	}
+
+	protected void setAdViewHeight(int h) {
+		hAdView = h;
 	}
 
 	@Override
 	public void changeLayout(int wAdBase, int hAdBase) {
 		mWidth = wAdBase;
 		mHeightAdBase = hAdBase;
-		mHeight = hAdBase;
-		if (mAdView != null) {
-			mHeight -= mAdView.getHeight();
-		}
+		mHeight = hAdBase - hAdView;
 		mPortrait = mWidth < mHeight;
+		log("changeLayout:" + wAdBase + " " + hAdBase + " " + mHeight);
 		FrameLayout.LayoutParams p = (FrameLayout.LayoutParams)mBase.getLayoutParams();
 		if (p != null) {
 			p.width = mWidth;
 			p.height = mHeight;
 			mBase.setLayoutParams(p);
 		}
+		log("changeLayout:done");
 	}
 
 	@Override
@@ -194,6 +238,12 @@ public abstract class AbstractPage implements Page {
 		Toolbar toolbar = activity.getToolbar();
 		if (toolbar != null) {
 			toolbar.setVisibility(enableToolbar ? View.VISIBLE : View.GONE);
+		}
+		for (Element element : elements) {
+			element.onResume();
+		}
+		if (saf != null) {
+			saf.setCallback();
 		}
 	}
 
@@ -203,24 +253,59 @@ public abstract class AbstractPage implements Page {
 		if (toolbar != null) {
 			toolbar.setVisibility(View.VISIBLE);
 		}
+		for (Element element : elements) {
+			element.onPause();
+		}
 		unblockClick();
 	}
 
-	protected void blockClick() {
-		BlockClick block = activity.mBlock;
-		if (block != null) {
-			block.block();
-		} else {
-			Log2.e(TAG, "blockClick: block == null...");
+	public void setToolbarIcon(@DrawableRes int idDrawable, float hRatio) {
+		Toolbar toolbar = activity.getToolbar();
+		if (toolbar != null) {
+			Resources r = activity.getResources();
+			Drawable d = ResourcesCompat.getDrawable(r, idDrawable, null);
+			if (d != null) {
+				int hToolbar = toolbar.getHeight();
+				int wh = (int)(hToolbar * hRatio);
+				Bitmap bitmap = ImageUtils.createBitmap(d, wh, wh, Color.TRANSPARENT);
+				toolbar.setLogo(new BitmapDrawable(r, bitmap));
+			}
 		}
 	}
 
+	@NonNull
+	protected File getCacheFile(@NonNull String fname) {
+		File dir = activity.getCacheDir();
+		return new File(dir, fname);
+	}
+
+	@NonNull
+	protected File getStorageFile(@NonNull String fname) {
+		File dir = activity.getFilesDir();
+		return new File(dir, fname);
+	}
+
+	protected void blockClick() {
+		activity.blockClick();
+	}
+
 	protected void unblockClick() {
-		BlockClick block = activity.mBlock;
-		if (block != null) {
-			block.unblock();
-		} else {
-			Log2.e(TAG, "unblockClick: block == null...");
+		activity.unblockClick();
+	}
+
+	protected void keepScreenOn() {
+		activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+	}
+
+	protected void notkeepScreenOn() {
+		activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+	}
+
+	protected void hideIme() {
+		View v = activity.getCurrentFocus();
+		if (v != null) {
+			InputMethodManager imm = (InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE);
+			imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
 		}
 	}
 
@@ -304,6 +389,11 @@ public abstract class AbstractPage implements Page {
 				done.run();
 			}
 		}
+	}
+
+	@Override
+	public void removeFromParentImmediately() {
+		mParent.removeView(mBase);
 	}
 
 	@Deprecated
@@ -401,23 +491,7 @@ public abstract class AbstractPage implements Page {
 		view.setBackgroundColor(COLOR_BG_TRANSPARENT);
 		return view;
 	}
-/*
-	@NonNull
-	protected ImageView createImageView(@NonNull Context context, @DrawableRes int idDrawable) {
-		ImageView view = createImageView(context);
-		view.setImageDrawable(context.getDrawable(idDrawable));
-		return view;
-	}
 
-	@NonNull
-	protected ImageView createImageViewPaddingX(@NonNull Context context, @DrawableRes int idDrawable, int padding) {
-		ImageView view = createImageView(context);
-		view.setImageDrawable(context.getDrawable(idDrawable));
-		int p = pixelX(padding);
-		view.setPadding(p, p, p, p);
-		return view;
-	}
-*/
 	@NonNull
 	protected ImageView createImageViewPaddingX(@NonNull Context context, @NonNull Drawable d, int padding) {
 		ImageView view = createImageView(context);
@@ -435,13 +509,41 @@ public abstract class AbstractPage implements Page {
 		}
 	}
 
+	protected void setOptionsMenu(@MenuRes int idMenu) {
+		this.idMenu = idMenu;
+		cbMenu = null;
+	}
+
+	protected void setOptionsMenu(@MenuRes int idMenu, @Nullable CallbackMenu cbMenu) {
+		this.idMenu = idMenu;
+		this.cbMenu = cbMenu;
+	}
+
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
+		if (idMenu != 0) {
+			activity.getMenuInflater().inflate(idMenu, menu);
+			if (cbMenu != null) {
+				cbMenu.callback(menu);
+			}
+			return true;
+		}
 		return false;
 	}
 
 	@Override
+	public void addMenuCallback(int idItem, @Nullable Runnable menu) {
+		menues.append(idItem, menu);
+	}
+
+	@Override
 	public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+		int id = item.getItemId();
+		Runnable menu = menues.get(id);
+		if (menu != null) {
+			menu.run();
+			return true;
+		}
 		return false;
 	}
 
@@ -456,6 +558,7 @@ public abstract class AbstractPage implements Page {
 	}
 
 	@Override
+	@AnyThread
 	@NonNull
 	public Task<Void> showSnackbarTask(@NonNull String msg) {
 		return Taskz.call(() -> {
@@ -465,6 +568,7 @@ public abstract class AbstractPage implements Page {
 	}
 
 	@Override
+	@AnyThread
 	@NonNull
 	public Task<Void> showSnackbarTask(@StringRes int idMessage) {
 		return Taskz.call(() -> {
@@ -489,13 +593,52 @@ public abstract class AbstractPage implements Page {
 		return Views.showSnackProgress(mBase, idMessage, idAction, listener);
 	}
 
+	@Override
+	@NonNull
+	public Snackbar showSnackProgress(@NonNull String msg) {
+		return Views.showSnackProgress(mBase, msg);
+	}
+
+	@Override
+	@NonNull
+	public Snackbar showSnackProgress(
+		@NonNull String msg,
+		@StringRes int idAction,
+		@NonNull View.OnClickListener listener
+	) {
+		return Views.showSnackProgress(mBase, msg, idAction, listener);
+	}
+
+	@Override
+	@MainThread
+	public boolean showSnackStackTrace2(@Nullable Throwable e) {
+		boolean rc = Taskz.printStackTrace2(e);
+		if (rc && e != null) {
+			Snackbar.make(mBase, e.toString(), Snackbar.LENGTH_LONG).show();
+		}
+		return rc;
+	}
+
+	@Override
+	@AnyThread
+	public boolean showSnackStackTrace2Task(@Nullable Throwable e) {
+		boolean rc = Taskz.printStackTrace2(e);
+		if (rc && e != null) {
+			Taskz.call(() -> {
+				Snackbar.make(mBase, e.toString(), Snackbar.LENGTH_LONG).show();
+				return null;
+			}).addOnFailureListener(Taskz::printStackTrace2);
+		}
+		return rc;
+	}
+
 	protected FloatingActionButton addFab(
 		@NonNull Context context,
 		@DrawableRes int idDrawable
 	) {
 		FloatingActionButton rc = new FloatingActionButton(context);
 		rc.setImageResource(idDrawable);
-		int m = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, context.getResources().getDisplayMetrics());
+		int m = (int)(16 * dp1);
 		FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(
 			FrameLayout.LayoutParams.WRAP_CONTENT,
 			FrameLayout.LayoutParams.WRAP_CONTENT
@@ -506,9 +649,24 @@ public abstract class AbstractPage implements Page {
 		return rc;
 	}
 
+	public void setFullScreen(boolean on) {
+		View decorView = activity.getWindow().getDecorView();
+		int uiSystem;
+		if (on) {
+			uiSystem = View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+		} else {
+			uiSystem = 0;
+		}
+		decorView.setSystemUiVisibility(uiSystem);
+	}
+
 	protected void setPref(@NonNull PagePref pref) {
 		this.pref = pref;
 		manager.loadPref(pref);
+	}
+
+	protected void setSaf(@Nullable Saf saf) {
+		this.saf = saf;
 	}
 
 	protected void enableDrawer() {
@@ -523,6 +681,16 @@ public abstract class AbstractPage implements Page {
 	@Nullable
 	public PagePref getPref() {
 		return pref;
+	}
+
+	@Override
+	@NonNull
+	public String getString(@StringRes int id) {
+		return activity.getString(id);
+	}
+
+	private void log(@NonNull String msg) {
+		Log2.e(TAG, msg);
 	}
 
 }

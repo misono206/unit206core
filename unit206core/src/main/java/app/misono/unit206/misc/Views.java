@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import android.widget.FrameLayout;
 import androidx.annotation.AnyThread;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 
 import app.misono.unit206.task.Taskz;
@@ -135,6 +136,20 @@ public final class Views {
 		return snack;
 	}
 
+	@MainThread
+	@NonNull
+	public static Snackbar showSnackProgress(
+		@NonNull View view,
+		@NonNull String msg,
+		@StringRes int idAction,
+		@NonNull View.OnClickListener listener
+	) {
+		Snackbar snack = Snackbar.make(view, msg, Snackbar.LENGTH_INDEFINITE);
+		snack.setAction(idAction, listener);
+		snack.show();
+		return snack;
+	}
+
 	@AnyThread
 	@NonNull
 	public static Task<Snackbar> showSnackProgressWorker(
@@ -146,6 +161,16 @@ public final class Views {
 		return Taskz.call(TaskExecutors.MAIN_THREAD, () -> {
 			return showSnackProgress(view, idMessage, idAction, listener);
 		});
+	}
+
+	@AnyThread
+	public static void dismissSnackWorker(@Nullable Snackbar snack) {
+		if (snack != null) {
+			Taskz.call(TaskExecutors.MAIN_THREAD, () -> {
+				snack.dismiss();
+				return null;
+			});
+		}
 	}
 
 	@NonNull

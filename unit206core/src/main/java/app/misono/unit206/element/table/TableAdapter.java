@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,19 +25,24 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 
+import app.misono.unit206.callback.CallbackObjectT;
+
 class TableAdapter<T extends TableCardItem> extends ListAdapter<T, TableViewHolder> {
 	private static final String TAG = "TableAdapter";
 
-	private final TableTrListener<T> listener;
 	private final TableParam param;
+
+	private CallbackObjectT<T> listener;
 
 	TableAdapter(
 		@NonNull TableParam param,
-		@NonNull DiffUtil.ItemCallback<T> diffCallback,
-		@Nullable TableTrListener<T> listener
+		@NonNull DiffUtil.ItemCallback<T> diffCallback
 	) {
 		super(diffCallback);
 		this.param = param;
+	}
+
+	public void setListener(@Nullable CallbackObjectT<T> listener) {
 		this.listener = listener;
 	}
 
@@ -66,7 +71,7 @@ class TableAdapter<T extends TableCardItem> extends ListAdapter<T, TableViewHold
 		}
 		if (listener != null) {
 			parent.setOnClickListener(v -> {
-				listener.onClick(item);
+				listener.callback(item);
 			});
 		}
 	}

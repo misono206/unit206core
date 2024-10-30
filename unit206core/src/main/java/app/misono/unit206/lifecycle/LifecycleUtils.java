@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 
+@Deprecated	// use viewmodel path
 public class LifecycleUtils {
 
 	@MainThread

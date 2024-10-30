@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,16 +30,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class PageAnimator implements Animatable {
 	private static final String TAG = "PageAnimator";
 
 	private final List<AbstractItem> list;
 	private final TimeAnimator animator;
-	private final Set<View> setView;
 	private final int duration;
 
 	private Runnable done;
@@ -48,7 +45,6 @@ public class PageAnimator implements Animatable {
 	public PageAnimator(int msecDuration) {
 		duration = msecDuration;
 		list = new ArrayList<>();
-		setView = new HashSet<>();
 		animator = new TimeAnimator();
 		animator.setTimeListener((animation, totalTime, deltaTime) -> {
 			if (duration <= totalTime) {
@@ -72,14 +68,6 @@ public class PageAnimator implements Animatable {
 				}
 			}
 		});
-	}
-
-	public void addView(@NonNull View view) {
-		setView.add(view);
-	}
-
-	public void removeView(@NonNull View view) {
-		setView.remove(view);
 	}
 
 	public void addItem(@NonNull View view, @NonNull FrameLayout.LayoutParams to) {
@@ -162,7 +150,7 @@ public class PageAnimator implements Animatable {
 		this.done = done;
 	}
 
-	public void start(@NonNull Runnable done) {
+	public void start(@Nullable Runnable done) {
 		this.done = done;
 		start();
 	}

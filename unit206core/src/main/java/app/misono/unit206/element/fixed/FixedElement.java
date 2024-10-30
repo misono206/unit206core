@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package app.misono.unit206.element.fixed;
 
+import android.view.View;
 import android.widget.FrameLayout;
 
 import androidx.annotation.MainThread;
@@ -47,9 +48,9 @@ public class FixedElement<
 	protected A adapter;
 	protected L layout;
 
-	private FrameLayout.LayoutParams params;
 	private int nSpan;
 	private int durationMove, durationAdd;
+	private int width, height;
 
 	public FixedElement(@NonNull FrameLayout parent) {
 		base = new RecyclerView(parent.getContext());
@@ -101,20 +102,24 @@ public class FixedElement<
 	}
 
 	@Override
-	public void setLayoutParams(@NonNull FrameLayout.LayoutParams params) {
-		this.params = params;
-		base.setLayoutParams(params);
-		Set<V> set = adapter.getAttachedViewHolders();
-		for (V holder : set) {
-			C card = holder.getView();
-			layout.refreshCard(card);
+	public void changeLayout(int width, int height) {
+		if (this.width != width || this.height != height) {
+			Set<V> set = adapter.getAttachedViewHolders();
+			for (V holder : set) {
+				C card = holder.getView();
+				layout.refreshCard(card);
+			}
 		}
 	}
 
+	@Override
+	@NonNull
+	public View getView() {
+		return base;
+	}
+
 	public void refreshLayout() {
-		if (params != null) {
-			setLayoutParams(params);
-		}
+		changeLayout(width, height);
 	}
 
 	public void setPadding(int left, int top, int right, int bottom) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,10 +72,11 @@ abstract class AbstractLineElement<T> implements Element {
 
 		base.setLayoutParams(param);
 		parent.addView(base);
-		setPixelSize(param.width, param.height);
+		changeLayout(param.width, param.height);
 	}
 
-	private void setPixelSize(int wPixel, int hPixel) {
+	@Override
+	public void changeLayout(int wPixel, int hPixel) {
 		pLeft.width = wPixel * perLabelW / 1000;
 		pLeft.height = hPixel;
 		pRight.width = wPixel - pLeft.width;
@@ -86,16 +87,17 @@ abstract class AbstractLineElement<T> implements Element {
 	}
 
 	@Override
+	@NonNull
+	public View getView() {
+		return base;
+	}
+
+	@Override
 	public void onResume() {
 	}
 
 	@Override
 	public void onPause() {
-	}
-
-	@Override
-	public void setLayoutParams(@NonNull FrameLayout.LayoutParams params) {
-		setPixelSize(params.width, params.height);
 	}
 
 	@Override

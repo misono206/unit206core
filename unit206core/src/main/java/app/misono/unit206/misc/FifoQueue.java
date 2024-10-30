@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package app.misono.unit206.misc;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 
@@ -33,7 +34,7 @@ public class FifoQueue<E> implements Closeable {
 	private final int capacity;
 
 	// lock instance
-	private Condition notFull, notEmpty;
+	private Condition notFull, notEmpty, isEmpty;
 	private LinkedList<E> fifo;
 
 	public FifoQueue(int capacity) {
@@ -46,6 +47,7 @@ public class FifoQueue<E> implements Closeable {
 		lock = new ReentrantLock();
 		notFull = lock.newCondition();
 		notEmpty = lock.newCondition();
+		isEmpty = lock.newCondition();
 		fifo = new LinkedList<E>();
 	}
 
@@ -56,16 +58,18 @@ public class FifoQueue<E> implements Closeable {
 			if (fifo != null) {
 				notEmpty.signalAll();
 				notFull.signalAll();
+				isEmpty.signalAll();
 			}
 			notFull = null;
 			notEmpty = null;
+			isEmpty = null;
 			fifo = null;
 			lock.unlock();
 		}
 	}
 
 	@WorkerThread
-	public void put(E e) throws InterruptedException {
+	public void put(@NonNull E e) throws InterruptedException {
 		lock.lock();
 		try {
 			if (fifo != null) {
@@ -86,6 +90,7 @@ public class FifoQueue<E> implements Closeable {
 	}
 
 	@WorkerThread
+	@NonNull
 	public E take() throws InterruptedException {
 		E rc = null;
 		lock.lock();
@@ -97,12 +102,27 @@ public class FifoQueue<E> implements Closeable {
 				if (fifo != null) {
 					rc = fifo.removeFirst();
 					notFull.signal();
+					if (fifo.isEmpty()) {
+						isEmpty.signalAll();
+					}
 				}
 			}
 		} finally {
 			lock.unlock();
 		}
 		return rc;
+	}
+
+	@WorkerThread
+	public void waitEmpty() throws InterruptedException {
+		lock.lock();
+		try {
+			if (!fifo.isEmpty()) {
+				isEmpty.await();
+			}
+		} finally {
+			lock.unlock();
+		}
 	}
 
 	public int count() {

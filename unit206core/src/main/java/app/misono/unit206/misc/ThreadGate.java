@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,36 @@
 
 package app.misono.unit206.misc;
 
+import android.os.ConditionVariable;
+
 public class ThreadGate {
-    private volatile boolean mOpen;
+	private final ConditionVariable gate;
 
-    public void open() {
-        synchronized (this) {
-            boolean old = mOpen;
-            mOpen = true;
-            if (!old) {
-                this.notifyAll();
-            }
-        }
-    }
+	private volatile boolean open;
 
-    public void block() throws InterruptedException {
-        synchronized (this) {
-            if (!mOpen) {
-                this.wait();
-            }
-        }
-    }
+	public ThreadGate() {
+		gate = new ConditionVariable();
+	}
+
+	public void open() {
+		open = true;
+		gate.open();
+	}
+
+	public void block() throws InterruptedException {
+		if (!open) {
+			gate.block();
+		}
+	}
+
+	public void block(long timeout) throws InterruptedException {
+		if (!open) {
+			gate.block(timeout);
+		}
+	}
+
+	public boolean isReady() {
+		return open;
+	}
 
 }

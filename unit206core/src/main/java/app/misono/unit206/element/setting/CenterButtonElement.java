@@ -59,7 +59,14 @@ public final class CenterButtonElement implements Element {
 	}
 
 	@Override
-	public void setLayoutParams(@NonNull FrameLayout.LayoutParams params) {
+	public void changeLayout(int width, int height) {
+		// TODO
+	}
+
+	@Override
+	@NonNull
+	public View getView() {
+		return button;
 	}
 
 	@Override

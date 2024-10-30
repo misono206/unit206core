@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,15 @@ package app.misono.unit206.element.fixed.image;
 
 import android.graphics.Bitmap;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import app.misono.unit206.element.fixed.FixedItem;
 
-import com.google.android.gms.tasks.Task;
-
 public interface FixedImageItem extends FixedItem {
 	@Nullable
 	String getName();
+	@Deprecated			// create a bitmap in the adapter instance.
 	@Nullable
-	Bitmap peekBitmap();
-	@NonNull
-	Task<Bitmap> getBitmap();
+	Bitmap getBitmap();
 
 }

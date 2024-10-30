@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,7 @@ package app.misono.unit206.misc;
 import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-import app.misono.unit206.debug.Log2;
+import androidx.annotation.WorkerThread;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.Random;
@@ -52,7 +50,7 @@ public final class SimpleCipher {
 			cipher = Cipher.getInstance(ALGORITHM);
 			rand = new Random(SystemClock.elapsedRealtime());
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
-			Log2.printStackTrace(e);
+			e.printStackTrace();
 		}
 	}
 
@@ -61,37 +59,27 @@ public final class SimpleCipher {
 		keyspec = new SecretKeySpec(key, ALGORITHM);
 	}
 
-	@Nullable
-	public byte[] encrypt(@NonNull byte[] data) {
+	@WorkerThread
+	@NonNull
+	public byte[] encrypt(@NonNull byte[] data) throws Exception {
 		byte[] rc = new byte[data.length + SIZE_SEED];
 		byte[] seed = new byte[SIZE_SEED];
-		try {
-			rand.nextBytes(seed);
-			seed[1] = SIZE_SEED;
-			cipher.init(Cipher.ENCRYPT_MODE, keyspec);
-			cipher.update(seed, 0, SIZE_SEED, rc, 0);
-			cipher.doFinal(data, 0, data.length, rc, SIZE_SEED);
-		} catch (Exception e) {
-			Log2.printStackTrace(e);
-			rc = null;
-		}
+		rand.nextBytes(seed);
+		seed[1] = SIZE_SEED;
+		cipher.init(Cipher.ENCRYPT_MODE, keyspec);
+		cipher.update(seed, 0, SIZE_SEED, rc, 0);
+		cipher.doFinal(data, 0, data.length, rc, SIZE_SEED);
 		return rc;
 	}
 
-	@Nullable
-	public byte[] decrypt(@NonNull byte[] data) {
-		byte[] rc;
-		try {
-			cipher.init(Cipher.DECRYPT_MODE, keyspec);
-			byte[] poff = cipher.update(data, 0, 2);
-			int offset = poff[1] & 0xff;
-			cipher.update(data, 2, offset - 2);
-			rc = cipher.doFinal(data, offset, data.length - offset);
-		} catch (Exception e) {
-			Log2.printStackTrace(e);
-			rc = null;
-		}
-		return rc;
+	@WorkerThread
+	@NonNull
+	public byte[] decrypt(@NonNull byte[] data) throws Exception {
+		cipher.init(Cipher.DECRYPT_MODE, keyspec);
+		byte[] poff = cipher.update(data, 0, 2);
+		int offset = poff[1] & 0xff;
+		cipher.update(data, 2, offset - 2);
+		return cipher.doFinal(data, offset, data.length - offset);
 	}
 
 }

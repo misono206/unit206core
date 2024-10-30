@@ -27,16 +27,12 @@ import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
 
 import app.misono.unit206.R;
-import app.misono.unit206.admob.AdMobBanner;
 import app.misono.unit206.debug.Log2;
 import app.misono.unit206.page.AbstractPage;
 import app.misono.unit206.page.FrameAnimator;
 import app.misono.unit206.page.PageActivity;
 import app.misono.unit206.page.PageManager;
 import app.misono.unit206.task.Taskz;
-
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.tasks.Tasks;
 
 import java.io.Closeable;
 
@@ -54,13 +50,11 @@ public class ColorPage extends AbstractPage implements Closeable {
 	public ColorPage(
 		@NonNull PageManager manager,
 		@NonNull PageActivity activity,
-		@NonNull FrameLayout adbase,
 		@NonNull FrameLayout parent,
-		@Nullable AdView adview,
 		@Nullable Runnable clickBack,
 		@NonNull Runnable done
 	) {
-		super(manager, activity, adbase, parent, adview, clickBack);
+		super(manager, activity, parent, clickBack);
 
 		mDone = done;
 		pref = new ColorPref(activity);
@@ -270,8 +264,7 @@ public class ColorPage extends AbstractPage implements Closeable {
 	public void changeLayout(int wAdBase, int hAdBase) {
 		super.changeLayout(wAdBase, hAdBase);
 		log("changeLayout:" + wAdBase + " " + hAdBase + " " + mPortrait);
-		AdMobBanner.getInstance().requestLayout(mAdBase, mParent, mAdView);
-		Tasks.call(() -> {
+		Taskz.call(() -> {
 			mAnime.stop();
 			mAnime.clear();
 			int w = mBase.getWidth();

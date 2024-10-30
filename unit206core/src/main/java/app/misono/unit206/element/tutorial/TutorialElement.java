@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,8 +75,9 @@ public class TutorialElement<T extends TutorialItem, V extends View> implements 
 		parent.addView(recycler, new FrameLayout.LayoutParams(0, 0));
 	}
 
-	public void setPixelSize(int pxWidth, int pxHeight) {
-		log("setPixelSize:" + pxWidth + " " + pxHeight);
+	@Override
+	public void changeLayout(int pxWidth, int pxHeight) {
+		log("changeLayout:" + pxWidth + " " + pxHeight);
 		if (this.pxWidth != pxWidth || this.pxHeight != pxHeight) {
 			this.pxWidth = pxWidth;
 			this.pxHeight = pxHeight;
@@ -99,6 +100,12 @@ public class TutorialElement<T extends TutorialItem, V extends View> implements 
 		}
 	}
 
+	@Override
+	@NonNull
+	public View getView() {
+		return recycler;
+	}
+
 	public void gotoIndex(int index) {
 		listenerPager.setSmoothScrolling(index);
 		recycler.smoothScrollToPosition(index);
@@ -115,11 +122,6 @@ public class TutorialElement<T extends TutorialItem, V extends View> implements 
 
 	@Override
 	public void onPause() {
-	}
-
-	@Override
-	public void setLayoutParams(@NonNull FrameLayout.LayoutParams params) {
-		setPixelSize(params.width, params.height);
 	}
 
 	@Override

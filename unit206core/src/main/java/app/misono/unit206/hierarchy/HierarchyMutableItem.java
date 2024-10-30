@@ -29,6 +29,7 @@ import java.util.Set;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+@Deprecated		//	change to LineageItemMutable
 public class HierarchyMutableItem implements HierarchyItem {
 	private static final String TAG = "HierarchyMutableItem";
 

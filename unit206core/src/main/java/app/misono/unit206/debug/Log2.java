@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ public final class Log2 {
 			PrintWriter writer = new PrintWriter(os);
 			e.printStackTrace(writer);
 			writer.close();
-			Log.e("", new String(os.toByteArray()));
+			Log.e("", os.toString());
 			if (LOG_SAVE) {
 				LogS.printStackTrace(e);
 			}
@@ -55,6 +55,13 @@ public final class Log2 {
 	public static void printStackTrace2(@Nullable Throwable e) {
 		if (e != null && !(e instanceof InterruptedException)) {
 			printStackTrace(e);
+		}
+	}
+
+	public static void e(@NonNull String tag, @NonNull String log, @NonNull Throwable e) {
+		if (DEBUG) {
+			Log.e(tag, log);
+			printStackTrace2(e);
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,39 @@
 
 package app.misono.unit206.page;
 
+import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.SparseArray;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
+import androidx.annotation.AnyThread;
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import app.misono.unit206.callback.CallbackIntent;
+import app.misono.unit206.callback.CallbackUri;
 import app.misono.unit206.debug.Log2;
 import app.misono.unit206.misc.BlockClick;
 import app.misono.unit206.misc.HamburgerMenu;
+import app.misono.unit206.misc.Views;
+import app.misono.unit206.task.Taskz;
+import app.misono.unit206.theme.AppStyle;
 
-import com.google.android.gms.ads.AdView;
+import com.google.android.material.snackbar.Snackbar;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -41,12 +56,19 @@ import java.util.Set;
 public class PageActivity extends AppCompatActivity {
 	private static final String TAG = "PageActivity";
 
+	public static final int CODE_SAF_START = 29000;
+	public static final int CODE_SAF_END = 30000;
+
 	private static final String BUNDLE_PAGES = "UNIT206";
 
-	private SparseArray<CallbackActivityResult> cbSaf;
+	private SparseArray<CallbackActivityResult> cbSaf;	// TODO: old type
 	private SparseArray<Runnable> cbPermission;
+	private CallbackIntent cbActivityResultIntent;
 	private HamburgerMenu hamburger;
 	private Set<Runnable> cbOnResume, cbOnPause, cbOnStart, cbOnStop;
+	private CallbackUri cbActivityResultUri;
+	private AppStyle style;
+	private boolean onResume, onStart;
 
 	protected PageManager mManager;
 	protected FrameLayout mAdBase;
@@ -54,10 +76,7 @@ public class PageActivity extends AppCompatActivity {
 	protected FrameLayout sizeBase;
 	protected BlockClick mBlock;
 	protected Toolbar vToolbar;
-	protected AdView mAdView;
 	protected View blockBase;
-
-	private boolean onResume, onStart;
 
 	public interface CallbackActivityResult {
 		void onActivityResult(int codeResult, @Nullable Intent intent);
@@ -90,15 +109,48 @@ public class PageActivity extends AppCompatActivity {
 		return vToolbar;
 	}
 
+	@Nullable
+	public TextView getToolbarTextView() {
+		if (vToolbar != null) {
+			int n = vToolbar.getChildCount();
+			for (int i = 0; i < n; i++) {
+				View view = vToolbar.getChildAt(i);
+				if (view instanceof TextView) {
+					return (TextView)view;
+				}
+			}
+		}
+		return null;
+	}
+
+	public void setToolbarEllipsize(@NonNull TextUtils.TruncateAt truncate) {
+		TextView vTitle = getToolbarTextView();
+		if (vTitle != null) {
+			vTitle.setEllipsize(truncate);
+		}
+	}
+
 	protected void setBlockClickView(int idSizeView, int idBlockView) {
 		blockBase = findViewById(idBlockView);
 		sizeBase = findViewById(idSizeView);
+	}
+
+	@Nullable
+	public <T extends AppStyle> T getAppStyle() {
+		return (T)style;
+	}
+
+	public void setAppStyle(@NonNull AppStyle style) {
+		this.style = style;
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
 		onResume = true;
+		if (style != null) {
+			style.onResumeActivity(this);
+		}
 		for (Runnable cb : cbOnResume) {
 			cb.run();
 		}
@@ -171,16 +223,29 @@ public class PageActivity extends AppCompatActivity {
 		cbOnStop.remove(callback);
 	}
 
-	protected void setParentView(
-		int idAdBase,
-		int idParent,
-		int idAdView
-	) {
+	@Deprecated	// use Page.setFullScreen()
+	public void setFullScreenMode(boolean on) {
+		View decorView = getWindow().getDecorView();
+		int uiSystem;
+		if (on) {
+			uiSystem = View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+		} else {
+			uiSystem = 0;
+		}
+		decorView.setSystemUiVisibility(uiSystem);
+	}
+
+	protected void setFullscreen() {
+		supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
+		getWindow().setFlags(
+			WindowManager.LayoutParams.FLAG_FULLSCREEN,
+			WindowManager.LayoutParams.FLAG_FULLSCREEN
+		);
+	}
+
+	protected void setParentView(int idAdBase, int idParent) {
 		mAdBase = findViewById(idAdBase);
 		mParent = findViewById(idParent);
-		if (idAdView != 0) {
-			mAdView = findViewById(idAdView);
-		}
 		if (blockBase != null) {
 			mBlock = new BlockClick(sizeBase, blockBase, this::changeLayout);
 		}
@@ -191,22 +256,28 @@ public class PageActivity extends AppCompatActivity {
 	}
 
 	protected void setParentView(int idParent) {
-		setParentView(idParent, idParent, 0);
+		setParentView(idParent, idParent);
+	}
+
+	@NonNull
+	public FrameLayout getParentView() {
+		return mParent;
+	}
+
+	@NonNull
+	public PageManager getPageManager() {
+		return mManager;
 	}
 
 	protected void setHamburger(
 		@Nullable HamburgerMenu hamburger,
 		int idAdBase,
-		int idParent,
-		int idAdView
+		int idParent
 	) {
 		this.hamburger = hamburger;
 		mManager.setHamburger(hamburger);
 		mAdBase = findViewById(idAdBase);
 		mParent = findViewById(idParent);
-		if (idAdView != 0) {
-			mAdView = findViewById(idAdView);
-		}
 		if (blockBase != null) {
 			mBlock = new BlockClick(sizeBase, blockBase, this::changeLayout);
 		}
@@ -216,7 +287,7 @@ public class PageActivity extends AppCompatActivity {
 		@Nullable HamburgerMenu hamburger,
 		int idParent
 	) {
-		setHamburger(hamburger, idParent, idParent, 0);
+		setHamburger(hamburger, idParent, idParent);
 	}
 
 	@Override
@@ -251,22 +322,105 @@ public class PageActivity extends AppCompatActivity {
 		outState.putBundle(BUNDLE_PAGES, mManager.createBundle());
 	}
 
+	public void setSafCallback(@Nullable CallbackUri callback) {
+		cbActivityResultUri = callback;
+		cbActivityResultIntent = null;
+	}
+
+	public void setSafCallback(@Nullable CallbackIntent callback) {
+		cbActivityResultIntent = callback;
+		cbActivityResultUri = null;
+	}
+
 	@Override
-	protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-		log("onActivityResult:" + requestCode + " " + resultCode);
-		CallbackActivityResult called = cbSaf.get(requestCode);
-		if (called != null) {
-			cbPermission.remove(requestCode);
-			called.onActivityResult(resultCode, data);
+	protected void onActivityResult(int codeRequest, int codeResult, @Nullable Intent data) {
+		log("onActivityResult:" + codeRequest + " " + codeResult + " " + data);
+		boolean callSuper = true;
+		if (CODE_SAF_START <= codeRequest
+			&& codeRequest < CODE_SAF_END
+			&& (cbActivityResultUri != null || cbActivityResultIntent != null)
+		) {
+			if (codeResult == Activity.RESULT_OK && data != null) {
+				if (cbActivityResultUri != null) {
+					Uri uri = data.getData();
+					if (uri != null) {
+						callSuper = false;
+						cbActivityResultUri.callback(uri);
+					}
+				} else {
+					callSuper = false;
+					cbActivityResultIntent.callback(data);
+				}
+			}
 		} else {
-			super.onActivityResult(requestCode, resultCode, data);
+			// TODO: old type???
+			CallbackActivityResult called = cbSaf.get(codeRequest);
+			if (called != null) {
+				callSuper = false;
+				cbSaf.remove(codeRequest);
+				called.onActivityResult(codeResult, data);
+			}
+		}
+		if (callSuper) {
+			super.onActivityResult(codeRequest, codeResult, data);
 		}
 	}
 
+	/**
+	 * load with startActivityForResult.
+	 *
+	 * @return true if success.
+	 */
+	@AnyThread
+	public boolean loadWithSaf(@NonNull String typeMime, int code) {
+		boolean rc;
+		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.setType(typeMime);
+		try {
+			startActivityForResult(intent, code);
+			rc = true;
+		} catch (ActivityNotFoundException e) {
+			e.printStackTrace();
+			rc = false;
+		}
+		return rc;
+	}
+
+	/**
+	 * save with startActivityForResult.
+	 *
+	 * @return true if success.
+	 */
+	@AnyThread
+	public boolean saveWithSaf(@NonNull String fileName, @NonNull String typeMime, int code) {
+		boolean rc;
+		Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		intent.setType(typeMime);
+		intent.putExtra(Intent.EXTRA_TITLE, fileName);
+		try {
+			startActivityForResult(intent, code);
+			rc = true;
+		} catch (ActivityNotFoundException e) {
+			e.printStackTrace();
+			rc = false;
+		}
+		return rc;
+	}
+
+	@AnyThread
+	public boolean saveStringWithSaf(@NonNull String fileName, int code) {
+		return saveWithSaf(fileName, "text/plain", code);
+	}
+
+	@Deprecated
 	public void addOnActivityResult(int codeRequest, @NonNull CallbackActivityResult callback) {
 		cbSaf.append(codeRequest, callback);
 	}
 
+	@Deprecated
 	public void removeOnActivityResult(int codeRequest) {
 		cbSaf.remove(codeRequest);
 	}
@@ -296,7 +450,7 @@ public class PageActivity extends AppCompatActivity {
 	}
 
 	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
+	public boolean onCreateOptionsMenu(@NonNull Menu menu) {
 		log("onCreateOptionsMenu:");
 		Page page = mManager.getTopPage();
 		if (page != null) {
@@ -323,6 +477,62 @@ public class PageActivity extends AppCompatActivity {
 		log("onDestroy:");
 		super.onDestroy();
 		mManager.close();
+	}
+
+	public void blockClick() {
+		BlockClick block = mBlock;
+		if (block != null) {
+			block.block();
+		} else {
+			Log2.e(TAG, "blockClick: block == null...");
+		}
+	}
+
+	public void unblockClick() {
+		BlockClick block = mBlock;
+		if (block != null) {
+			block.unblock();
+		} else {
+			Log2.e(TAG, "unblockClick: block == null...");
+		}
+	}
+
+	@MainThread
+	public void showSnackbar(@NonNull String msg) {
+		Snackbar.make(mAdBase, msg, Snackbar.LENGTH_LONG).show();
+	}
+
+	@MainThread
+	public void showSnackbar(@StringRes int idMessage) {
+		Snackbar.make(mAdBase, idMessage, Snackbar.LENGTH_LONG).show();
+	}
+
+	@NonNull
+	public Snackbar showSnackProgress(@StringRes int idMessage) {
+		return Views.showSnackProgress(mAdBase, idMessage);
+	}
+
+	@NonNull
+	public Snackbar showSnackProgress(
+		@StringRes int idMessage,
+		@StringRes int idAction,
+		@NonNull View.OnClickListener listener
+	) {
+		return Views.showSnackProgress(mAdBase, idMessage, idAction, listener);
+	}
+
+	@NonNull
+	public Snackbar showSnackProgress(@NonNull String msg) {
+		return Views.showSnackProgress(mAdBase, msg);
+	}
+
+	@MainThread
+	public boolean showSnackStackTrace2(@Nullable Throwable e) {
+		boolean rc = Taskz.printStackTrace2(e);
+		if (rc && e != null) {
+			Snackbar.make(mAdBase, e.toString(), Snackbar.LENGTH_LONG).show();
+		}
+		return rc;
 	}
 
 	private void log(@NonNull String msg) {

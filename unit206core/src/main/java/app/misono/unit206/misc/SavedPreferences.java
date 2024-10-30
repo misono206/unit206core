@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,7 +102,7 @@ public class SavedPreferences {
 		getEditor().remove(key);
 	}
 
-	@Nullable
+	@NonNull
 	public String getString(@NonNull String key, @Nullable String defaultValue) {
 		return mPref.getString(key, defaultValue);
 	}

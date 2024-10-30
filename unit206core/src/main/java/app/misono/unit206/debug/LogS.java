@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import android.os.Environment;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import app.misono.unit206.BuildConfig;
 import app.misono.unit206.misc.Utils;
 import app.misono.unit206.task.SingletonTask;
 
@@ -38,8 +39,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 final class LogS {
-	private static final boolean DEBUG = true; // TODO: BuildConfig
-	private static SimpleDateFormat form = new SimpleDateFormat("HH:mm:ss.SSS", Locale.US);
+	private static final boolean DEBUG = BuildConfig.DEBUG;
+	private static final SimpleDateFormat form = new SimpleDateFormat("HH:mm:ss.SSS", Locale.US);
+
 	private static ExecutorService executor;
 	private static SingletonTask thread;
 	private static File file;

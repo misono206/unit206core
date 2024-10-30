@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,12 @@
 
 package app.misono.unit206.task;
 
+import android.os.ConditionVariable;
 import android.os.OperationCanceledException;
 
 import androidx.annotation.NonNull;
 
-import app.misono.unit206.misc.ThreadGate;
+import app.misono.unit206.debug.Log2;
 
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
@@ -31,6 +32,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 
 public class SingletonTask {
+	private static final String TAG = "SingletonTask";
+
 	private final Object LOCK = new Object();
 	private final List<TaskSemaphore> list;
 
@@ -83,12 +86,12 @@ public class SingletonTask {
 	}
 
 	@NonNull
-	public Task<Void> call(@NonNull Executor executor, @NonNull BlockingRunnable runnable) {
+	public Task<Void> call(@NonNull Executor executor, @NonNull ConditionRunnable runnable) {
 		TaskSemaphore sem = getSemaphore();
 		try {
 			return Taskz.call(executor, () -> {
 				sem.acquire();
-				ThreadGate block = new ThreadGate();
+				ConditionVariable block = new ConditionVariable();
 				try {
 					runnable.run(block);
 				} catch (Exception e) {
@@ -105,6 +108,12 @@ public class SingletonTask {
 		}
 	}
 
+	public int getWaitingCount() {
+		synchronized(LOCK) {
+			return list.size();
+		}
+	}
+
 	private TaskSemaphore getSemaphore() {
 		TaskSemaphore sem = new TaskSemaphore();
 		synchronized(LOCK) {
@@ -117,19 +126,19 @@ public class SingletonTask {
 	}
 
 	private class TaskSemaphore  {
-		private final ThreadGate gate;
+		private final ConditionVariable gate;
 
 		private Exception e;
 
 		private TaskSemaphore() {
-			gate = new ThreadGate();
+			gate = new ConditionVariable();
 		}
 
 		private void open() {
 			gate.open();
 		}
 
-		private void acquire() throws InterruptedException {
+		private void acquire() {
 			gate.block();
 		}
 
@@ -171,6 +180,10 @@ public class SingletonTask {
 				}
 			}
 		}
+	}
+
+	private void log(@NonNull String msg) {
+		Log2.e(TAG, msg);
 	}
 
 }

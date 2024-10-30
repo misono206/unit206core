@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +27,9 @@ import android.view.View;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.core.view.GestureDetectorCompat;
 
+import app.misono.unit206.callback.CallbackMatrix;
 import app.misono.unit206.debug.Log2;
 
 public class ScalingView extends View {
@@ -38,11 +38,12 @@ public class ScalingView extends View {
 	private static final int MODE_FIT_CENTER = 0;
 	private static final int MODE_CENTER_CROP = 1;
 	private static final int MODE_CENTER_CROP_FIXED = 2;
+	private static final int MODE_FLEXIBLE = 3;
 
 	private GestureDetectorCompat detector;
 	private ScaleGestureDetector mScaleDetector;
 	private SingleTapListener listenerTap;
-	private Listener mListener;
+	private CallbackMatrix listener;
 	private Matrix mMatrix;
 	private Matrix mInvert;
 	private float[] mBitmapRect;
@@ -65,10 +66,6 @@ public class ScalingView extends View {
 	private int mViewH;
 	private int mode;
 
-	public interface Listener {
-		void onChanged(@NonNull Matrix matrix);
-	}
-
 	public interface SingleTapListener {
 		void onSingleTapUp(float xView, float yView);
 	}
@@ -88,7 +85,6 @@ public class ScalingView extends View {
 		init(context);
 	}
 
-	@RequiresApi(21)
 	public ScalingView(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
 		super(context, attrs, defStyleAttr, defStyleRes);
 		init(context);
@@ -143,14 +139,20 @@ public class ScalingView extends View {
 		mode = MODE_CENTER_CROP_FIXED;
 	}
 
+	public void setFlexibleMode() {
+		mode = MODE_FLEXIBLE;
+	}
+
 	@MainThread
 	private void callback() {
 		mMatrix.setTranslate(mBitmapX, mBitmapY);
 		mMatrix.postScale(mScale, mScale);
 		mMatrix.postTranslate(mViewX, mViewY);
-		correctXY();
-		if (mListener != null) {
-			mListener.onChanged(new Matrix(mMatrix));
+		if (mode != MODE_FLEXIBLE) {
+			correctXY();
+		}
+		if (listener != null) {
+			listener.callback(new Matrix(mMatrix));
 		}
 	}
 
@@ -206,6 +208,9 @@ public class ScalingView extends View {
 		if (mScale < mScaleMin) {
 			mScale = mScaleMin;
 		}
+		if (mode == MODE_FLEXIBLE) {
+			mScale = calcFlexibleInitialScale(wView, hView);
+		}
 		mViewX = wView / 2f;
 		mViewY = hView / 2f;
 		int xOffsetBitmap = 0;
@@ -229,17 +234,27 @@ public class ScalingView extends View {
 	}
 
 	public float calcMinScale(int wView, int hView) {
-		float wScale = (float)wView / mBitmapW;
-		float hScale = (float)hView / mBitmapH;
-		if (mode == MODE_FIT_CENTER) {
-			return Math.min(wScale, hScale);
+		if (mode == MODE_FLEXIBLE) {
+			return Float.MIN_VALUE;
 		} else {
-			return Math.max(wScale, hScale);
+			float wScale = (float)wView / mBitmapW;
+			float hScale = (float)hView / mBitmapH;
+			if (mode == MODE_FIT_CENTER) {
+				return Math.min(wScale, hScale);
+			} else {
+				return Math.max(wScale, hScale);
+			}
 		}
 	}
 
-	public void setListener(@Nullable Listener listener) {
-		mListener = listener;
+	private float calcFlexibleInitialScale(int wView, int hView) {
+		float wScale = (float)wView / mBitmapW;
+		float hScale = (float)hView / mBitmapH;
+		return Math.min(wScale, hScale);
+	}
+
+	public void setListener(@Nullable CallbackMatrix listener) {
+		this.listener = listener;
 	}
 
 	public void setSingleTapListener(@Nullable SingleTapListener listener) {
@@ -270,7 +285,7 @@ public class ScalingView extends View {
 					float dy = sy - mMoveY;
 					mMoveX = sx;
 					mMoveY = sy;
-					if (mListener != null) {
+					if (listener != null) {
 						mBitmapX += dx / mScale;
 						mBitmapY += dy / mScale;
 						callback();

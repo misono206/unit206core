@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2024 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package app.misono.unit206.page.steelcamera;
+package app.misono.unit206.callback;
 
-import android.hardware.Camera;
+import androidx.annotation.WorkerThread;
 
-import androidx.annotation.NonNull;
-
-public interface CallbackCameraParameters {
-	void callback(@NonNull Camera.Parameters param);
+public interface CallbackWorker {
+	@WorkerThread
+	void callback() throws Exception;
 
 }

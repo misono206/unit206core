@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,11 @@ import androidx.annotation.NonNull;
 
 import app.misono.unit206.drawable.icon.CheckCircleDrawable;
 
+/**
+ * selectionのための cardだと思う.
+ * いまいち.
+ */
+@Deprecated
 public abstract class AbstractCard extends FrameLayout {
 	private static final String TAG = "AbstractCard";
 
@@ -37,8 +42,7 @@ public abstract class AbstractCard extends FrameLayout {
 		super(context);
 	}
 
-	public AbstractCard(@NonNull Context context, @NonNull ViewGroup.LayoutParams param) {
-		super(context);
+	public void initialize(@NonNull ViewGroup.LayoutParams param) {
 		setLayoutParams(param);
 		width = param.width;
 		height = param.height;

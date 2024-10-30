@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package app.misono.unit206.element.table;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
@@ -27,11 +28,15 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import app.misono.unit206.callback.CallbackObjectT;
 import app.misono.unit206.element.Element;
 import app.misono.unit206.misc.UnitPref;
 
 import java.util.List;
 
+/**
+ * The table is made one item for one line.
+ */
 public class TableElement<T extends TableCardItem> implements Element {
 	private static final String TAG = "TableElement";
 
@@ -42,15 +47,12 @@ public class TableElement<T extends TableCardItem> implements Element {
 	private int pxWidth, pxHeight;
 
 	public TableElement(
-		@NonNull ViewGroup parent,	// TODO: FrameLayout
-		@NonNull ViewGroup.LayoutParams param,	// TODO: @Deprecated
+		@NonNull Context context,
 		@NonNull TableParam paramT,
-		@NonNull DiffUtil.ItemCallback<T> diffCallback,
-		@Nullable TableTrListener<T> listener
+		@NonNull DiffUtil.ItemCallback<T> diffCallback
 	) {
 		this.param = paramT;
-		Context context = parent.getContext();
-		adapter = new TableAdapter<>(paramT, diffCallback, listener);
+		adapter = new TableAdapter<>(paramT, diffCallback);
 		recycler = new RecyclerView(context);
 		LinearLayoutManager rman;
 		int[] colorBg = paramT.getBackgroundColor();
@@ -75,19 +77,31 @@ public class TableElement<T extends TableCardItem> implements Element {
 		recycler.setLayoutManager(rman);
 		recycler.setAdapter(adapter);
 		recycler.setBackgroundColor(Color.LTGRAY);
-		parent.addView(recycler, param);
 	}
 
-	private void setPixelSize(int pxWidth, int pxHeight) {
+	public void setListener(@Nullable CallbackObjectT<T> listener) {
+		adapter.setListener(listener);
+	}
+
+	@Override
+	public void changeLayout(int pxWidth, int pxHeight) {
 		if (this.pxWidth != pxWidth || this.pxHeight != pxHeight) {
 			this.pxWidth = pxWidth;
 			this.pxHeight = pxHeight;
 			param.setPixel(pxWidth, pxHeight);
 			ViewGroup.LayoutParams p1 = recycler.getLayoutParams();
-			p1.width = pxWidth;
-			p1.height = pxHeight;
-			recycler.requestLayout();
+			if (p1 != null) {
+				p1.width = pxWidth;
+				p1.height = pxHeight;
+				recycler.setLayoutParams(p1);
+			}
 		}
+	}
+
+	@Override
+	@NonNull
+	public View getView() {
+		return recycler;
 	}
 
 	@Override
@@ -96,11 +110,6 @@ public class TableElement<T extends TableCardItem> implements Element {
 
 	@Override
 	public void onPause() {
-	}
-
-	@Override
-	public void setLayoutParams(@NonNull FrameLayout.LayoutParams params) {
-		setPixelSize(params.width, params.height);
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Atelier Misono, Inc. @ https://misono.app/
+ * Copyright 2020 Atelier Misono, Inc. @ https://misono.app/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package app.misono.unit206.page.steelcamera;
+package app.misono.unit206.page.stillcamera;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -23,26 +23,40 @@ import android.hardware.Camera;
 import android.util.Size;
 import android.view.SurfaceView;
 
+import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import app.misono.unit206.callback.CallbackBitmap;
 import app.misono.unit206.debug.Log2;
+import app.misono.unit206.misc.ThreadGate;
+import app.misono.unit206.task.ObjectReference;
+import app.misono.unit206.task.Taskz;
 
-import java.io.IOException;
+import com.google.android.gms.tasks.Task;
+
 import java.util.List;
+import java.util.concurrent.Executor;
 
-class SteelcameraControl {
-	private static final String TAG = "SteelcameraControl";
+/**
+ * TODO: need refactoring using Utils.CameraUtils.
+ */
+class StillcameraControl {
+	private static final String TAG = "StillcameraControl";
 
 	private final int aspect100;
 
 	private Camera.CameraInfo info;
 	private Camera camera;
+	private int degreeDevice;
 
-	SteelcameraControl(int aspect100) {
+	StillcameraControl(int aspect100) {
 		this.aspect100 = aspect100;
+	}
+
+	void setDeviceDegree(int degree) {
+		degreeDevice = degree;
 	}
 
 	void start(
@@ -53,36 +67,43 @@ class SteelcameraControl {
 		int hPicture,
 		int qualityJpeg,
 		@Nullable CallbackCameraParameters callback
-	) {
+	) throws Exception {
 		log("start:");
 		camera = Camera.open(idCamera);
 		info = new Camera.CameraInfo();
 		Camera.getCameraInfo(idCamera, info);
-		try {
-			if (idCamera == 0) {
-				camera.setDisplayOrientation(info.orientation);
-			} else {
-				camera.setDisplayOrientation((info.orientation + 180) % 360);	// TODO:
-			}
-			Camera.Parameters cp = camera.getParameters();
-			if (idCamera == 0) { // 設定するとインカメ(id=1)で動作しない
-				cp.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-			}
-			cp.setJpegQuality(qualityJpeg);
-			setZoom(cp, zoom);
-			setPictureSize(cp, wPicture, hPicture);
-			if (callback != null) {
-				callback.callback(cp);
-			}
-			camera.setParameters(cp);
-			camera.setPreviewDisplay(surfaceView.getHolder());
-			camera.startPreview();
-			camera.setErrorCallback((error, camera) -> {
-				log("onError:" + error);
-			});
-		} catch (IOException e) {
-			e.printStackTrace();
+		if (idCamera == 0) {
+			camera.setDisplayOrientation((info.orientation + degreeDevice) % 360);
+		} else {
+			camera.setDisplayOrientation((info.orientation + degreeDevice + 180) % 360);	// TODO:
 		}
+		Camera.Parameters cp = camera.getParameters();
+		if (isSupportedFocusMode(cp, Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
+			cp.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+		}
+		cp.setJpegQuality(qualityJpeg);
+		setZoom(cp, zoom);
+		setPictureSize(cp, wPicture, hPicture);
+		if (callback != null) {
+			callback.callback(cp);
+		}
+		camera.setParameters(cp);
+		camera.setErrorCallback((error, camera) -> {
+			log("onError:" + error);
+		});
+		camera.setPreviewDisplay(surfaceView.getHolder());
+		camera.startPreview();
+		log("start:done:");
+	}
+
+	private boolean isSupportedFocusMode(@NonNull Camera.Parameters cp, @NonNull String mode) {
+		List<String> list = cp.getSupportedFocusModes();
+		for (String s : list) {
+			if (mode.contentEquals(s)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void setPictureSize(@NonNull Camera.Parameters cp, int width, int height) {
@@ -162,6 +183,7 @@ class SteelcameraControl {
 		return new Size(size.width, size.height);
 	}
 
+	@Deprecated	// use takePictureTask()
 	void takePicture(@NonNull CallbackBitmap taken) {
 		camera.takePicture(
 			null,
@@ -178,6 +200,33 @@ class SteelcameraControl {
 				taken.callback(b);
 			}
 		);
+	}
+
+	@AnyThread
+	@NonNull
+	Task<Bitmap> takePictureTask(@NonNull Executor executor) {
+		return Taskz.call(executor, () -> {
+			ObjectReference<Bitmap> refBitmap = new ObjectReference<>();
+			ThreadGate gate =new ThreadGate();
+			camera.takePicture(
+				null,
+				null,
+				null,
+				(data, c) -> {
+					// jpeg
+					log("take:" + data.length);
+					Bitmap b = BitmapFactory.decodeByteArray(data, 0, data.length, null);
+					Matrix matrix = new Matrix();
+					matrix.postRotate(info.orientation);
+					b = Bitmap.createBitmap(b, 0, 0, b.getWidth(), b.getHeight(), matrix, true);
+					log("take:" + b.getWidth() + " " + b.getHeight());
+					refBitmap.set(b);
+					gate.open();
+				}
+			);
+			gate.block();
+			return refBitmap.get();
+		});
 	}
 
 	private void log(@NonNull String msg) {

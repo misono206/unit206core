@@ -56,7 +56,9 @@ public interface Page {
 	boolean onCreateOptionsMenu(Menu menu);
 	boolean onOptionsItemSelected(@NonNull MenuItem item);
 	void showSnackbar(@NonNull String msg);
+	void showSnackbar(@NonNull String msg, int msec);
 	void showSnackbar(@StringRes int idMessage);
+	void showSnackbar(@StringRes int idMessage, int msec);
 	@NonNull
 	Task<Void> showSnackbarTask(@NonNull String msg);
 	@NonNull

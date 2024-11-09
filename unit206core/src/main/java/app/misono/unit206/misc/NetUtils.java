@@ -40,7 +40,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@RequiresApi(21)
 public class NetUtils {
 	private static final String TAG = "NetUtil";
 

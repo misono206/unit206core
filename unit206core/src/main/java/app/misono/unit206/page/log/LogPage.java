@@ -31,7 +31,6 @@ import app.misono.unit206.debug.Log2;
 import app.misono.unit206.misc.Utils;
 import app.misono.unit206.page.AbstractPage;
 import app.misono.unit206.page.PageActivity;
-import app.misono.unit206.page.PageManager;
 import app.misono.unit206.task.SingletonTask;
 import app.misono.unit206.task.Taskz;
 import app.misono.unit206.theme.AppStyle;
@@ -65,13 +64,11 @@ public class LogPage extends AbstractPage {
 	private final int codeSaf;
 
 	public LogPage(
-		@NonNull PageManager manager,
 		@NonNull PageActivity activity,
-		@NonNull FrameLayout parent,
 		int codeSaf,
 		@Nullable Runnable clickBack
 	) {
-		super(manager, activity, parent, clickBack);
+		super(activity, clickBack);
 		this.codeSaf = codeSaf;
 		layout = new LogLayout();
 		view = new LogView(activity);

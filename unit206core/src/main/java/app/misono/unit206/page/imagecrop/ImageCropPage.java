@@ -30,7 +30,6 @@ import app.misono.unit206.callback.CallbackLayout;
 import app.misono.unit206.debug.Log2;
 import app.misono.unit206.page.AbstractPage;
 import app.misono.unit206.page.PageActivity;
-import app.misono.unit206.page.PageManager;
 
 public class ImageCropPage extends AbstractPage {
 	private static final String TAG = "ImageCropPage";
@@ -41,13 +40,11 @@ public class ImageCropPage extends AbstractPage {
 	private CallbackLayout cbLayout;
 
 	public ImageCropPage(
-		@NonNull PageManager manager,
 		@NonNull PageActivity activity,
-		@NonNull FrameLayout parent,
 		@Nullable Runnable clickBack,
 		@NonNull ImageCropCallback cbCropped
 	) {
-		super(manager, activity, parent, clickBack);
+		super(activity, clickBack);
 
 		view = new ImageCropView(activity);
 		view.setDoneCallback(() -> {

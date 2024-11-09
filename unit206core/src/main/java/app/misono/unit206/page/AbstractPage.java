@@ -553,8 +553,18 @@ public abstract class AbstractPage implements Page {
 	}
 
 	@Override
+	public void showSnackbar(@NonNull String msg, int msec) {
+		Snackbar.make(mBase, msg, msec).show();
+	}
+
+	@Override
 	public void showSnackbar(@StringRes int idMessage) {
 		Snackbar.make(mBase, idMessage, Snackbar.LENGTH_LONG).show();
+	}
+
+	@Override
+	public void showSnackbar(@StringRes int idMessage, int msec) {
+		Snackbar.make(mBase, idMessage, msec).show();
 	}
 
 	@Override

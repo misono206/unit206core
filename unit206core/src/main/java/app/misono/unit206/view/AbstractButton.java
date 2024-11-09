@@ -24,6 +24,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 
 import app.misono.unit206.debug.Log2;
@@ -37,6 +38,7 @@ public abstract class AbstractButton extends MaterialCardView {
 	private MaterialTextView text;
 	private float scaleText;
 	private float perWidth;
+	private float perRadius;
 
 	public abstract int getBackgroundColor();
 
@@ -45,7 +47,7 @@ public abstract class AbstractButton extends MaterialCardView {
 		init(context);
 	}
 
-	public AbstractButton(@NonNull Context context, @NonNull AttributeSet attr) {
+	public AbstractButton(@NonNull Context context, @Nullable AttributeSet attr) {
 		super(context, attr);
 		init(context);
 	}
@@ -53,6 +55,7 @@ public abstract class AbstractButton extends MaterialCardView {
 	private void init(@NonNull Context context) {
 		scaleText = 0.3f;
 		perWidth = 0.8f;
+		perRadius = 0.15f;
 
 		text = new MaterialTextView(context);
 		addView(text, new LayoutParams(0, 0));
@@ -81,7 +84,12 @@ public abstract class AbstractButton extends MaterialCardView {
 		this.perWidth = perWidth;
 	}
 
+	public void setRadiusPercent(float perRadius) {
+		this.perRadius = perRadius;
+	}
+
 	public void setPixelSize(int wButton, int hButton) {
+		int minWH = Math.min(wButton, hButton);
 		LayoutParams p = (LayoutParams)text.getLayoutParams();
 		p.width = wButton;
 		p.height = hButton;
@@ -98,6 +106,7 @@ public abstract class AbstractButton extends MaterialCardView {
 		}
 		text.setTextSize(TypedValue.COMPLEX_UNIT_PX, sizeText);
 		text.setLayoutParams(p);
+		setRadius(perRadius * minWH);
 	}
 
 	@Override

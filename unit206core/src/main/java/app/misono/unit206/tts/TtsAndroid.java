@@ -23,7 +23,6 @@ import android.speech.tts.Voice;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.WorkerThread;
 
 import app.misono.unit206.debug.Log2;
@@ -34,7 +33,6 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
-@RequiresApi(21)
 public class TtsAndroid implements TtsEngine {
 	private static final String TAG = "TtsAndroid";
 

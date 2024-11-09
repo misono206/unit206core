@@ -17,6 +17,7 @@
 package app.misono.unit206.misc;
 
 import android.app.DatePickerDialog;
+import android.app.Dialog;
 import android.app.TimePickerDialog;
 import android.content.Context;
 import android.graphics.Color;
@@ -51,6 +52,10 @@ public class DialogUtils {
 
 	public static void setCanceledOnTouchOutside(boolean cancel) {
 		isCanceledOnTouchOutside = cancel;
+	}
+
+	public static void setOutsideSetting(@NonNull Dialog d) {
+		d.setCanceledOnTouchOutside(isCanceledOnTouchOutside);
 	}
 
 	@NonNull
